@@ -2,6 +2,18 @@
 
 Russian and Uzbek storefront for @fragranceuz, with an original transparent gold logo, bold Apple/system typography and warm light/dark themes. About contains store information and social/contact links; appearance controls are kept out of that section. The catalog comes first, without a large welcome or arrivals block.
 
+## Storefront design — "boutique"
+
+The customer storefront (`app/storefront.tsx`, `app/boutique.css`, `app/boutique/`, `app/finder.tsx`) was redesigned around the brand's burgundy and gold. Backend, admin, order API and data are unchanged; orders use the same `/api/orders` contract.
+
+- **Bottle aura.** Every channel photo is a bottle on white, so each bottle is blended (`mix-blend-mode: multiply`) onto a tint taken from its own colour: arched "display niches" in the catalog and a full-colour stage on the product page. Inside Telegram the header bar takes the colour of the open perfume. The photo watermark sits below the bottle and is cropped from view.
+- **Shop by bottle colour.** `scripts/bottle-tones.py` extracts each bottle's colour into `data/bottle-tones.json` (gold, pink, red, amber, black, crystal, silver, blue, green, lilac). Products imported later get a colour computed in the browser; re-run `python3 scripts/bottle-tones.py` (needs Pillow) to bake them in.
+- **Home:** "New in the window" carousel of the 10 newest posts, 3-step finder, colour swatches, top houses, recently viewed, then the collection with sticky audience switch, filter sheet (sort, budget incl. "Exclusive · from 2.5 million", colour, concentration, house search) and infinite scroll.
+- **Product:** volume picker, Fragrantica link, **"Hint at a gift"** (shares the channel post through Telegram with a ready-made message) and the original post.
+- **Bag:** flying-bottle add animation and haptics, review step, **"This is a gift"** flag (added to the order note), remembered contact details, same draft fallback when the bot is not connected.
+- **Deep links:** `https://t.me/<bot>/<app>?startapp=<product id>` (or `/?product=<id>`) opens that perfume directly — use it in channel posts.
+- Light and dark themes, Russian and Uzbek copy (all new keys are in `data/translations.json`), self-hosted fonts (Cormorant Garamond, Manrope, Oswald via `@fontsource`).
+
 ## Current catalog
 
 The public channel was refreshed for **28 April–28 October 2026**, Asia/Tashkent. The audit covers 574 messages across 29 pages, crossing the cutoff on a page dated 20 April. There are **539 catalog offers** from 543 priced posts after removing 4 exact older repeats. Distinct sizes, concentrations, testers, partial bottles and sets remain separate offers. 537 real source photos are stored locally; 2 posts have no image. 22 entries have no single matching scent link and 10 have no explicit release year; those fields remain empty. No substitute Fragrantica URLs, release years, stock counts or scent notes are invented.

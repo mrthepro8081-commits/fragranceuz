@@ -1,0 +1,7 @@
+'use client';
+import {useEffect,useRef} from 'react';
+export function Modal({children,close,className='',title}:{children:React.ReactNode;close:()=>void;className?:string;title:string}){
+ const ref=useRef<HTMLDivElement>(null);const closeRef=useRef(close);closeRef.current=close;
+ useEffect(()=>{const prev=document.activeElement as HTMLElement;const overflow=document.body.style.overflow;document.body.style.overflow='hidden';const el=ref.current;el?.querySelector<HTMLElement>('button,input,a')?.focus();const handler=(e:KeyboardEvent)=>{const dialogs=document.querySelectorAll('[role=dialog]');if(dialogs[dialogs.length-1]!==el)return;if(e.key==='Escape')closeRef.current();if(e.key==='Tab'){const nodes=el?.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary');if(!nodes?.length)return;const visible=Array.from(nodes).filter(n=>n.getClientRects().length);if(!visible.length)return;const first=visible[0],last=visible[visible.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}};document.addEventListener('keydown',handler);return()=>{document.body.style.overflow=overflow;document.removeEventListener('keydown',handler);prev?.focus()};},[]);
+ return <div className="overlay" onClick={close}><div ref={ref} role="dialog" aria-modal="true" aria-label={title} className={'modal '+className} onClick={e=>e.stopPropagation()}>{children}</div></div>;
+}

@@ -13,7 +13,7 @@ import {formatMoney,formatProductName,formatBottle,formatCountry,formatConcentra
 import {useLanguage,LanguageSwitch} from '../language';
 import {Brand,LogoLoader} from '../brand';
 import {ThemeToggle} from '../theme';
-import {Modal} from '../storefront';
+import {Modal} from '../modal';
 import {productInput} from '../../lib/validation';
 type Order={id:string;data:OrderData;total:number;status:string;notification:string;created_at:string};
 export default function Admin({demo=false}:{demo?:boolean}){

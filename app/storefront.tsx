@@ -1,107 +1,1497 @@
 'use client';
-import {formatMoney,formatProductName,formatBottle,formatCountry,formatConcentration,fragranceCount,errorText,formatDate} from '../lib/i18n';
-import Link from 'next/link';
-import {useLanguage,LanguageSwitch} from './language';
-import {Brand,LogoLoader} from './brand';
-import {ThemeToggle} from './theme';
-import {startingPrice,startingVariant,withinBudget,concentrationGroup,relatedProducts,cleanCart,cleanSaved} from '../lib/catalog';
-import {phoneEntry} from '../lib/phone';
-import {defaultSettings,socialHandle,type StoreSettings} from '../lib/settings';
-import {FragranceFinder} from './finder';
-import {customerInput} from '../lib/validation';
-import {composeOrderDraft} from '../lib/checkout';
-import {useEffect,useRef,useState,useMemo} from 'react';
-import {ArrowRight,ArrowUpRight,Check,ChevronDown,ChevronLeft,Heart,Home,LayoutGrid,Search,ShoppingBag,SlidersHorizontal,X,Plus,Minus,Send,Flower2,MessageCircle,ExternalLink,CheckCircle2,Loader2,Trash2,Camera,Truck,Info,ChevronRight,Pencil,Settings2} from 'lucide-react';
-import type {Product,CartItem} from '../lib/types';
-type TG={initData:string;ready:()=>void;expand:()=>void;setHeaderColor?:(s:string)=>void;setBackgroundColor?:(s:string)=>void;openTelegramLink?:(s:string)=>void;openLink?:(s:string)=>void;HapticFeedback?:{impactOccurred:(s:string)=>void};BackButton?:{show:()=>void;hide:()=>void;onClick:(f:()=>void)=>void;offClick:(f:()=>void)=>void};onEvent?:(s:string,f:()=>void)=>void;offEvent?:(s:string,f:()=>void)=>void;safeAreaInset?:{top?:number;bottom?:number};contentSafeAreaInset?:{top?:number;bottom?:number}};
-declare global{interface Window{Telegram?:{WebApp:TG}}}
+import '@fontsource/cormorant-garamond/500.css';
+import '@fontsource/cormorant-garamond/600.css';
+import '@fontsource/cormorant-garamond/500-italic.css';
+import '@fontsource/manrope/500.css';
+import '@fontsource/manrope/600.css';
+import '@fontsource/manrope/700.css';
+import '@fontsource/manrope/800.css';
+import '@fontsource/oswald/500.css';
+import './boutique.css';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowRight, ArrowUpRight, Check, ChevronDown, Copy, Gift, Heart, Info, Loader2, Minus, Moon, Pencil, Plus, Search,
+  Send, Settings2, ShoppingBag, SlidersHorizontal, Sparkles, Sun, Trash2, Truck, X, Home, MessageCircle, Phone, Star, Droplets,
+} from 'lucide-react';
+import { formatMoney, formatBottle, formatCountry, formatConcentration, fragranceCount } from '../lib/i18n';
+import { cleanCart, cleanSaved, concentrationGroup, relatedProducts } from '../lib/catalog';
+import { phoneEntry } from '../lib/phone';
+import { defaultSettings, socialHandle, type StoreSettings } from '../lib/settings';
+import { customerInput } from '../lib/validation';
+import { composeOrderDraft } from '../lib/checkout';
+import type { Product, CartItem } from '../lib/types';
+import { useLanguage, LanguageSwitch } from './language';
+import { FragranceFinder, type FinderChoice } from './finder';
+import { FAMILIES, hasTone, measureTone, tints, toneOf, type Tone } from './boutique/tone';
+import { cheapest, displayName, inBudget, shortConcentration, type Budget } from './boutique/format';
 
-
-function saveLocal(key:string,value:unknown){try{localStorage.setItem(key,JSON.stringify(value))}catch{}}
-function loadLocal<T,>(key:string,fallback:T):T{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
-function goExternal(url:string){const tg=window.Telegram?.WebApp;if(url.startsWith('https://t.me/')&&tg?.initData&&tg.openTelegramLink)tg.openTelegramLink(url);else if(tg?.initData&&tg.openLink)tg.openLink(url);else window.open(url,'_blank','noopener,noreferrer');}
-export function Modal({children,close,className='',title}:{children:React.ReactNode;close:()=>void;className?:string;title:string}){
- const ref=useRef<HTMLDivElement>(null);const closeRef=useRef(close);closeRef.current=close;
- useEffect(()=>{const prev=document.activeElement as HTMLElement;const overflow=document.body.style.overflow;document.body.style.overflow='hidden';const el=ref.current;el?.querySelector<HTMLElement>('button,input,a')?.focus();const handler=(e:KeyboardEvent)=>{const dialogs=document.querySelectorAll('[role=dialog]');if(dialogs[dialogs.length-1]!==el)return;if(e.key==='Escape')closeRef.current();if(e.key==='Tab'){const nodes=el?.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary');if(!nodes?.length)return;const visible=Array.from(nodes).filter(n=>n.getClientRects().length);if(!visible.length)return;const first=visible[0],last=visible[visible.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}};document.addEventListener('keydown',handler);return()=>{document.body.style.overflow=overflow;document.removeEventListener('keydown',handler);prev?.focus()};},[]);
- return <div className="overlay" onClick={close}><div ref={ref} role="dialog" aria-modal="true" aria-label={title} className={'modal '+className} onClick={e=>e.stopPropagation()}>{children}</div></div>;
-}
-export default function Storefront(){
- const {lang,setLang,t}=useLanguage();const money=(n:number)=>formatMoney(n,lang);const bottle=(s:string)=>formatBottle(s,lang);const genderLabel:Record<string,string>={women:t('For her'),men:t('For him'),unisex:t('Unisex'),unspecified:t('Fragrance')};
- const [demo,setDemo]=useState(false),[demoAvailable,setDemoAvailable]=useState(false),[shownCount,setShownCount]=useState(24);
- const [settings,setSettings]=useState<StoreSettings>(defaultSettings);
- const [products,setProducts]=useState<Product[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
- const [tab,setTab]=useState('catalog'),[query,setQuery]=useState(''),[gender,setGender]=useState('all'),[brand,setBrand]=useState('all'),[maxPrice,setMaxPrice]=useState(''),[sort,setSort]=useState('latest'),[filters,setFilters]=useState(false);
- const [selected,setSelected]=useState<Product|null>(null),[variant,setVariant]=useState(0),[cart,setCart]=useState<CartItem[]>([]),[saved,setSaved]=useState<string[]>([]),[hydrated,setHydrated]=useState(false),[cartOpen,setCartOpen]=useState(false),[help,setHelp]=useState(false),[toast,setToast]=useState('');
- const [checkoutReady,setCheckoutReady]=useState(false),[botUsername,setBotUsername]=useState(''),[inTelegram,setInTelegram]=useState(false),[busy,setBusy]=useState(false),[orderResult,setOrderResult]=useState<{orderId:string;notification:string}|null>(null),[orderError,setOrderError]=useState('');
- const [viewerRole,setViewerRole]=useState<string|null>(null),[startup,setStartup]=useState(true),[draftOpened,setDraftOpened]=useState(false),[fieldErrors,setFieldErrors]=useState<Record<string,string>>({});
- const [finder,setFinder]=useState(false),[concentration,setConcentration]=useState('all'),[recent,setRecent]=useState<string[]>([]),[review,setReview]=useState(false);
- const [categoryEnd,setCategoryEnd]=useState(false);const categoryRef=useRef<HTMLDivElement>(null);
- const [customer,setCustomer]=useState({name:'',phone:'+998 ',address:'',note:''});const requestKey=useRef('');const searchRef=useRef<HTMLInputElement>(null);
- const storageKey=(name:string)=>(demo?'fragranceuz-demo-':'fragranceuz-')+name;
- useEffect(()=>{const demoMode=new URLSearchParams(location.search).get('demo')==='1';setDemo(demoMode);const prefix=demoMode?'fragranceuz-demo-':'fragranceuz-';setCart(cleanCart(loadLocal(prefix+'cart',[])));setSaved(cleanSaved(loadLocal(prefix+'saved',[])));setRecent(cleanSaved(loadLocal(prefix+'recent',[])));setHydrated(true);refresh(true);const tg=window.Telegram?.WebApp;if(tg?.initData){setInTelegram(true);tg.ready();tg.expand();}
- const safe=()=>{const top=Math.max(tg?.safeAreaInset?.top||0,tg?.contentSafeAreaInset?.top||0);const bottom=Math.max(tg?.safeAreaInset?.bottom||0,tg?.contentSafeAreaInset?.bottom||0);document.documentElement.style.setProperty('--safe-top',top+'px');document.documentElement.style.setProperty('--safe-bottom',bottom+'px')};safe();tg?.onEvent?.('safeAreaChanged',safe);tg?.onEvent?.('contentSafeAreaChanged',safe);return()=>{tg?.offEvent?.('safeAreaChanged',safe);tg?.offEvent?.('contentSafeAreaChanged',safe)};
- },[]);
- async function refresh(first=false){const started=Date.now();setLoading(true);setError('');try{const r=await fetch(new URLSearchParams(location.search).get('demo')==='1'?'/api/demo':'/api/store',{headers:{'x-telegram-init-data':window.Telegram?.WebApp?.initData||''},signal:AbortSignal.timeout(15000)});const d=await r.json() as {error?:string;products:Product[];checkoutReady:boolean;botUsername:string|null;viewerRole:string|null;settings:StoreSettings;demo?:boolean;demoAvailable?:boolean};if(!r.ok)throw new Error(d.error);setDemo(!!d.demo);setDemoAvailable(!!d.demoAvailable);setProducts(d.products);setCart(current=>{let changed=false;const next=current.map(row=>{const option=d.products.find(p=>p.id===row.id)?.variants[row.variant];if(row.expectedLabel===undefined&&option){changed=true;return {...row,expectedLabel:option.label}}return row});return changed?next:current});setSettings(d.settings);setCheckoutReady(d.checkoutReady);setBotUsername(d.botUsername||'fragranceuz_bot');setViewerRole(d.viewerRole)}catch(e){setError(e instanceof Error?e.message:'Could not load catalog')}finally{setLoading(false);if(first)setTimeout(()=>setStartup(false),Math.max(0,350-(Date.now()-started)));}}
- useEffect(()=>{if(hydrated){saveLocal(storageKey('cart'),cart);setReview(false);requestKey.current='';setOrderError('')}},[cart,hydrated]);
- useEffect(()=>{if(hydrated)saveLocal(storageKey('saved'),saved)},[saved,hydrated]);
- useEffect(()=>setShownCount(24),[tab,query,gender,brand,maxPrice,concentration,sort]);
- useEffect(()=>{if(toast){const t=setTimeout(()=>setToast(''),2600);return()=>clearTimeout(t)}},[toast]);
- useEffect(()=>{const tg=window.Telegram?.WebApp;const close=()=>{if(busy)return;if(finder){setFinder(false);return;}if(selected)setSelected(null);else if(cartOpen)setCartOpen(false);else if(help)setHelp(false);else navigate('home')};if(tg?.initData&&tg.BackButton){if(selected||cartOpen||help||finder||tab!=='catalog')tg.BackButton.show();else tg.BackButton.hide();tg.BackButton.onClick(close);return()=>tg.BackButton?.offClick(close)}},[selected,cartOpen,help,finder,tab,busy]);
- function navigate(next:string,g?:string){setFilters(false);setTab(next==='home'?'catalog':next);if(next==='home'||next==='saved'){setGender('all');setBrand('all');setMaxPrice('');setConcentration('all');setQuery('')}else if(g)setGender(g);window.scrollTo({top:0,behavior:'smooth'})}
- function toggleSaved(id:string){setSaved(x=>x.includes(id)?x.filter(i=>i!==id):[...x,id])}
- function openProduct(p:Product){setSelected(p);setVariant(startingVariant(p));setRecent(current=>{const next=[p.id,...current.filter(id=>id!==p.id)].slice(0,8);saveLocal(storageKey('recent'),next);return next})}
- function add(p:Product,v=0){const existing=cart.find(x=>x.id===p.id&&x.variant===v);if(existing&&existing.quantity>=10){setToast('Maximum 10 bottles per option');return;}if(!existing&&cart.length>=15){setToast('Maximum 15 bottle options per order');return;}setCart(c=>{const match=c.find(x=>x.id===p.id&&x.variant===v);return match?c.map(x=>x===match?{...x,quantity:Math.min(10,x.quantity+1)}:x):[...c,{id:p.id,variant:v,quantity:1,expectedLabel:p.variants[v].label}]});setToast("Added to your bag");if(window.Telegram?.WebApp?.initData)window.Telegram.WebApp.HapticFeedback?.impactOccurred('light')}
- const cartRows=cart.map(row=>({...row,product:products.find(x=>x.id===row.id)}));
- const cartCount=cart.reduce((s,x)=>s+x.quantity,0);const cartTotal=cartRows.reduce((s,x)=>s+(x.product?.variants[x.variant]?.price||0)*x.quantity,0);const invalidCart=cartRows.some(x=>!x.product||!x.product.variants[x.variant]||(x.expectedLabel!==undefined&&x.expectedLabel!==x.product.variants[x.variant]?.label));
- const brands=useMemo(()=>[...new Set(products.map(p=>p.brand).filter(Boolean))].sort(),[products]);
- const filtered=useMemo(()=>products.filter(p=>(tab!=='saved'||saved.includes(p.id))&&(gender==='all'||p.gender===gender)&&(brand==='all'||p.brand===brand)&&withinBudget(p,maxPrice)&&(concentration==='all'||concentrationGroup(p.concentration)===concentration)&&`${p.name} ${p.brand} ${p.title}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a,b)=>sort==='price-asc'?startingPrice(a)-startingPrice(b):sort==='price-desc'?startingPrice(b)-startingPrice(a):sort==='name'?a.name.localeCompare(b.name):Number(b.id)-Number(a.id)),[products,tab,saved,gender,brand,maxPrice,concentration,query,sort]);
-
-
- function changeQty(id:string,v:number,d:number){setCart(c=>c.map(x=>x.id===id&&x.variant===v?{...x,quantity:Math.min(10,x.quantity+d)}:x).filter(x=>x.quantity>0))}
- function makeOrderDraft(details=customer){return composeOrderDraft(details,cartRows.filter(x=>x.product&&x.product.variants[x.variant]).map(x=>({name:x.product!.name,brand:x.product!.brand,label:x.product!.variants[x.variant].label,price:x.product!.variants[x.variant].price,quantity:x.quantity})),lang);}
- function changeCustomer(field:keyof typeof customer,value:string){requestKey.current='';setReview(false);setDraftOpened(false);setCustomer(current=>({...current,[field]:value}));setFieldErrors(current=>({...current,[field]:''}));}
- async function placeOrder(e:React.FormEvent){
-  e.preventDefault();if(busy)return;setOrderError('');setFieldErrors({});
-  const checked=customerInput.safeParse(customer);
-  if(!checked.success){const errors:Record<string,string>={};for(const issue of checked.error.issues){const field=String(issue.path[0]);errors[field]=field==='name'?'Please enter your full name':field==='phone'?'Please enter a valid phone number':'Please enter your delivery address';}setFieldErrors(errors);document.getElementById('checkout-'+Object.keys(errors)[0])?.focus();return;}
-  if(invalidCart||cart.length===0)return;
-  if(!review){setCustomer(checked.data);setReview(true);return;}
-  if(demo){setOrderResult({orderId:'demo-'+crypto.randomUUID(),notification:'demo'});setCart([]);return;}
-  if(!checkoutReady||!inTelegram){goExternal(settings.managerUrl+'?text='+encodeURIComponent(makeOrderDraft(checked.data)));setDraftOpened(true);return;}
-  setBusy(true);if(!requestKey.current)requestKey.current=crypto.randomUUID();
-  try{const r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json','x-telegram-init-data':window.Telegram?.WebApp?.initData||'','x-store-language':lang},body:JSON.stringify({requestKey:requestKey.current,language:lang,quotedTotal:cartTotal,customer:checked.data,items:cart})});const d=await r.json() as {error?:string;orderId:string;notification:string};if(!r.ok){if(r.status===409){setReview(false);await refresh();}throw new Error(d.error)}setOrderResult(d);setCart([]);}catch(e){setOrderError(e instanceof Error?e.message:'Could not send order. Please try again.')}finally{setBusy(false)}
- }
-
- return <>
- {demo&&<div className="demo-banner"><span>{t("Demo storefront")}</span><Link href="/demo">{t("Demo admin")}<Settings2 size={14}/></Link></div>}
- {startup&&<LogoLoader lang={lang} fullscreen/>}
- <header className="site-header"><button className="wordmark" onClick={()=>navigate('home')} aria-label={t("Fragrance UZ home")}><Brand/></button><nav className="desktop-nav" aria-label={t("Main navigation")}><button className={tab!=='saved'?'active':''} onClick={()=>navigate('home')}>{t("The collection")}</button><button onClick={()=>setHelp(true)}>{t("About us")}</button></nav><div className="header-actions"><ThemeToggle lang={lang}/><LanguageSwitch lang={lang} setLang={setLang}/><button className="desktop-heart" aria-label={t("Saved fragrances")} onClick={()=>navigate('saved','all')}><Heart size={21}/>{saved.length>0&&<span className="tiny-dot"/>}</button><button className="bag-trigger" aria-label={t('Bag')+': '+cartCount} onClick={()=>{setCartOpen(true);setOrderResult(null)}}><ShoppingBag size={21}/><span className="bag-label">{t("Bag")}</span><span className="bag-count">{cartCount}</span></button></div></header>
- <main>
- <section className="catalog-page section-wrap">
- {demoAvailable&&!demo&&!viewerRole&&<Link className="demo-entry" href="/demo"><Settings2 size={19}/><span>{t("Demo admin")}</span><ArrowRight size={18}/></Link>}
-  <div className="catalog-title"><h1>{tab==='saved'?t("Saved fragrances"):t("The collection")}</h1><div className="catalog-title-actions"><button className="finder-trigger" onClick={()=>setFinder(true)}><Flower2 size={17}/>{t("Find your fragrance")}<ArrowRight size={15}/></button>{viewerRole&&<Link href={demo?"/demo":"/admin"} className="owner-manage"><Settings2 size={17}/>{t(demo||!viewerRole?"Demo admin":"Store management")}</Link>}</div></div>
-  <div className="catalog-search"><Search size={20}/><input ref={searchRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder={t("Search a fragrance or a house…")} aria-label={t("Search fragrances")}/>{query&&<button onClick={()=>setQuery('')} aria-label={t("Clear search")}><X size={17}/></button>}<button aria-label={t("Filters")} className={'filter-trigger '+(filters?'selected':'')} onClick={()=>setFilters(x=>!x)}><SlidersHorizontal size={19}/>{(brand!=='all'||maxPrice!==''||concentration!=='all')&&<span className="filter-dot"/>}</button></div>
-  <div className="category-strip"><div ref={categoryRef} className="catalog-categories" role="group" aria-label={t('Collection categories')} onScroll={e=>setCategoryEnd(e.currentTarget.scrollLeft+e.currentTarget.clientWidth>=e.currentTarget.scrollWidth-3)}>
-   {[['all','All'],['women','Women'],['men','Men'],['unisex','Unisex']].map(([id,label])=><button key={id} className={'chip '+(gender===id?'selected':'')} aria-pressed={gender===id} onClick={()=>setGender(id)}>{t(label)}</button>)}
-   <span className="category-divider" aria-hidden="true"/>
-   {[['1000000','Up to 1 million'],['2500000','Up to 2.5 million'],['','Exclusive']].map(([value,label])=><button key={label} className={'chip budget-chip '+(maxPrice===value?'budget-selected':'')} aria-label={value?t(label):t('Exclusive · no limit')} aria-pressed={maxPrice===value} onClick={()=>setMaxPrice(value)}>{t(label)}</button>)}
-  </div><button className="category-scroll" aria-label={t(categoryEnd?'Previous categories':'More categories')} onClick={()=>{const row=categoryRef.current;if(row)row.scrollTo({left:categoryEnd?0:row.scrollWidth,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}>{categoryEnd?<ChevronLeft size={18}/>:<ChevronRight size={18}/>}</button></div>
-  {filters&&<div className="filter-panel"><label>{t("Concentration")}<select value={concentration} onChange={e=>setConcentration(e.target.value)}>{[["all","Any concentration"],["edt","Eau de Toilette (EDT)"],["edp","Eau de Parfum (EDP)"],["parfum","Parfum"],["extrait","Extrait de Parfum"]].map(([value,label])=><option key={value} value={value}>{t(label)}</option>)}</select></label><label>{t("Fragrance house")}<select value={brand} onChange={e=>setBrand(e.target.value)}><option value="all">{t("All houses")}</option>{brands.map(b=><option key={b}>{b}</option>)}</select></label><label>{t("Maximum price, сум")}<input inputMode="numeric" type="number" min="0" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} placeholder={t("Any price")}/></label><button className="text-link" onClick={()=>{setGender('all');setBrand('all');setMaxPrice('');setConcentration('all');setQuery('')}}>{t("Reset filters")}<X size={14}/></button></div>}
-  {(query||gender!=="all"||brand!=="all"||maxPrice||concentration!=="all")&&<div className="active-filters">{gender!=="all"&&<span>{genderLabel[gender]}</span>}{brand!=="all"&&<span>{brand}</span>}{maxPrice&&<span>≤ {money(Number(maxPrice))}</span>}{concentration!=="all"&&<span>{concentration.toUpperCase()}</span>}<button onClick={()=>{setQuery('');setGender('all');setBrand('all');setMaxPrice('');setConcentration('all')}}>{t("Clear filters")}<X size={13}/></button></div>}
-  <div className="results-meta"><span>{fragranceCount(filtered.length,lang)}</span><label className="sort-control"><span className="sr-only">{t("Sort fragrances")}</span><select aria-label={t("Sort fragrances")} value={sort} onChange={e=>setSort(e.target.value)}><option value="latest">{t("Latest in channel")}</option><option value="price-asc">{t("Price: low to high")}</option><option value="price-desc">{t("Price: high to low")}</option><option value="name">{t("Name: A–Z")}</option></select><ChevronDown size={14}/></label></div>
-  {loading?<LogoLoader lang={lang}/>:error?<div className="empty"><p>{errorText(error,lang)}</p><button className="secondary" onClick={()=>refresh()}>{t("Try again")}</button></div>:filtered.length?<div className="product-grid">{filtered.slice(0,shownCount).map((p,i)=><ProductCard key={p.id} p={p} index={i} saved={saved} viewerRole={viewerRole} demo={demo} openProduct={openProduct} toggleSaved={toggleSaved} add={add}/>)}</div>:<div className="empty"><Heart size={35} strokeWidth={1.5}/><h2>{tab==='saved'&&!saved.length?t("Keep a little inspiration."):t("No fragrances found.")}</h2><p>{tab==='saved'&&!saved.length?t("Tap the heart on a fragrance to save it here."):t("Try another name, fragrance house, or price.")}</p><button className="secondary" onClick={()=>{setQuery('');setGender('all');setBrand('all');setMaxPrice('');if(tab==='saved')navigate('home')}}>{tab==='saved'?t("Explore the collection"):t("Clear filters")}</button></div>}
- {!loading&&!error&&filtered.length>shownCount&&<button className="secondary load-more" onClick={()=>setShownCount(n=>n+24)}>{t("Show more fragrances")} <ChevronDown size={16}/></button>}
- {recent.some(id=>products.some(p=>p.id===id))&&<details className="recent-viewed"><summary>{t("Recently viewed")} <span>({recent.filter(id=>products.some(p=>p.id===id)).length})</span></summary><div className="related-grid">{recent.map(id=>products.find(p=>p.id===id)).filter((p):p is Product=>!!p).map(p=><button key={p.id} onClick={()=>openProduct(p)}>{p.image&&<img src={p.image} alt=""/>}<span className="brand-label">{p.brand}</span><strong>{formatProductName(p.name,lang)}</strong><small>{money(startingPrice(p))}</small></button>)}</div><button className="text-link" onClick={()=>{setRecent([]);saveLocal(storageKey("recent"),[])}}>{t("Clear history")}</button></details>}
- </section>
- </main>
- <footer className="site-footer"><small>FRAGRANCE UZ</small><div><button onClick={()=>goExternal(settings.channelUrl)}>Telegram <ArrowUpRight size={13}/></button><button onClick={()=>setHelp(true)}>{t("Contact")}</button>{(viewerRole||demoAvailable)&&<Link href={demo||!viewerRole?"/demo":"/admin"}>{t(demo||!viewerRole?"Demo admin":"Store management")}</Link>}</div></footer>
- <nav className="mobile-nav" aria-label={t("Mobile navigation")}><button className={tab!=='saved'&&!cartOpen&&!help?'active':''} onClick={()=>navigate('home')}><LayoutGrid size={21}/><span>{t("Collection")}</span></button><button className={tab==='saved'&&!cartOpen&&!help?'active':''} onClick={()=>navigate('saved')}><Heart size={21}/><span>{t("Saved")}</span></button><button className={cartOpen?'active':''} onClick={()=>{setCartOpen(true);setOrderResult(null)}}><span className="mobile-bag"><ShoppingBag size={21}/>{cartCount>0&&<i>{cartCount}</i>}</span><span>{t("Bag")}</span></button><button className={help?'active':''} onClick={()=>setHelp(true)}><Info size={21}/><span>{t("About us")}</span></button></nav>
- {finder&&<Modal title={t("Find your fragrance")} close={()=>setFinder(false)} className="finder-modal"><FragranceFinder products={products} close={()=>setFinder(false)} apply={choice=>{setTab("catalog");setQuery("");setBrand("all");setGender(choice.gender);setMaxPrice(choice.budget);setConcentration(choice.concentration);setFinder(false);setFilters(false);window.scrollTo({top:0,behavior:"smooth"})}}/></Modal>}
- {selected&&<Modal title={selected.brand+' '+selected.name} close={()=>setSelected(null)} className="product-modal"><button className="close-button" onClick={()=>setSelected(null)} aria-label={t("Close product")}><X size={21}/></button><div className="detail-image">{selected.image?<img src={selected.image} alt={selected.brand+' '+selected.name}/>:<Flower2 size={80}/>}<button className={'save-button '+(saved.includes(selected.id)?'is-saved':'')} onClick={()=>toggleSaved(selected.id)} aria-label={t(saved.includes(selected.id)?"Unsave":"Save fragrance")}><Heart size={20} fill={saved.includes(selected.id)?'currentColor':'none'}/></button></div><div className="detail-copy"><span className="eyebrow">{selected.brand}</span><h2>{formatProductName(selected.name,lang)}</h2><p className="detail-type">{selected.concentration&&<>{formatConcentration(selected.concentration,lang)} · </>}{genderLabel[selected.gender]}</p><div className="detail-divider"/><span className="field-label">{t("SELECT YOUR BOTTLE")}</span><div className="variant-options">{selected.variants.map((v,i)=><button className={'variant '+(variant===i?'selected':'')} key={i} onClick={()=>setVariant(i)}>{bottle(v.label)}{variant===i&&<Check size={14}/>}</button>)}</div><div className="detail-price">{money(selected.variants[variant].price)}</div><p className="availability"><span/>{t("Availability & final price confirmed on request")}</p><button className="primary full" onClick={()=>add(selected,variant)}>{t("Add to bag")}<ShoppingBag size={18}/></button>{selected.fragranticaUrl&&<button className="scent-link" onClick={()=>goExternal(selected.fragranticaUrl!)}><Flower2 size={21} strokeWidth={1}/><span><strong>{t("Discover the scent")}</strong><small>{t("Notes & scent profile on Fragrantica")}</small></span><ArrowUpRight size={19}/></button>}<dl className="product-facts">{selected.country&&<><dt>{t("Country")}</dt><dd>{formatCountry(selected.country,lang)}</dd></>}<dt>{t("Release year")}</dt><dd>{selected.year&&selected.year!=='-'?selected.year.replace(/г\.?$/,''):t("Not specified in the post")}</dd><dt>{t("Source")}</dt><dd><button onClick={()=>goExternal(selected.sourceUrl)}>{t("Original channel post")}<ArrowUpRight size={12}/></button></dd></dl></div>{relatedProducts(selected,products).length>0&&<section className="related-products"><h3>{t("More to explore")}</h3><p>{t("From the same house or a similar price range.")}</p><div className="related-grid">{relatedProducts(selected,products).map(p=><button key={p.id} onClick={()=>openProduct(p)}>{p.image&&<img src={p.image} alt=""/>}<span className="brand-label">{p.brand}</span><strong>{formatProductName(p.name,lang)}</strong><small>{money(startingPrice(p))}</small></button>)}</div></section>}</Modal>}
- {cartOpen&&<Modal title={t("Your shopping bag")} close={()=>{if(!busy)setCartOpen(false)}} className="cart-modal"><div className="modal-heading"><div><span className="eyebrow">{t("A LITTLE SOMETHING FOR YOU")}</span><h2>{t("Your bag")}<span> ({cartCount})</span></h2></div><button disabled={busy} onClick={()=>setCartOpen(false)} aria-label={t("Close bag")}><X size={23}/></button></div>{orderResult?<div className="order-success"><CheckCircle2 size={48} strokeWidth={1}/><h2>{t(demo?"Demo order complete":"Your request is saved.")}</h2><p>{t('Reference')} #{orderResult.orderId.slice(0,8)}</p><p>{demo?t('This was a demonstration. No order was sent and no contact details were saved.'):orderResult.notification==='sent'?t("The store has received your request in Telegram and will confirm availability, final pricing, and delivery."):orderResult.notification==='failed'?t("Your request is safely saved. The Telegram alert could not be delivered; please contact the store with your reference."):t("Your request is saved; the Telegram alert is pending. Please keep your reference.")}</p><button className="secondary" onClick={()=>goExternal(settings.managerUrl)}>{t("Contact the store")}<ArrowUpRight size={17}/></button><button className="text-link" onClick={()=>{setCartOpen(false);navigate('catalog')}}>{t("Continue exploring")}<ArrowRight size={16}/></button></div>:cart.length?<><details className={review?"bag-line-items reviewing":"bag-line-items"} open={!review}><summary>{t("Items in your bag")} ({cartCount})<ChevronDown size={16}/></summary><div className="cart-items">{cartRows.map(x=><div className="cart-row" key={x.id+':'+x.variant}>{x.product?.image?<img src={x.product.image} alt={x.product.name}/>:<Flower2/>}<div><span className="brand-label">{x.product?.brand||t("Unavailable fragrance")}</span><h3>{x.product?.name||x.id}</h3><small>{bottle(x.product?.variants[x.variant]?.label||t("Please remove this item"))}</small><div className="quantity"><button aria-label={t('Decrease')+': '+x.product?.name} disabled={busy} onClick={()=>changeQty(x.id,x.variant,-1)}><Minus size={13}/></button><span>{x.quantity}</span><button aria-label={t('Increase')+': '+x.product?.name} disabled={busy||x.quantity>=10} onClick={()=>changeQty(x.id,x.variant,1)}><Plus size={13}/></button></div></div><div className="cart-row-end"><button disabled={busy} aria-label={t('Remove')+': '+x.product?.name} onClick={()=>setCart(c=>c.filter(r=>r.id!==x.id||r.variant!==x.variant))}><Trash2 size={16}/></button><strong>{money((x.product?.variants[x.variant]?.price||0)*x.quantity)}</strong></div></div>)}</div></details><div className="cart-total"><span>{t("Product subtotal")}</span><strong>{money(cartTotal)}</strong></div><p className="checkout-delivery"><Truck size={18}/>{t(settings.freeTashkentDelivery?"Free and quick delivery in Tashkent":"Delivery arranged with the store")}</p><p className="cart-note">{t("This is an order request. Availability, final price, delivery, and payment are arranged with the store.")}</p>{invalidCart?<p role="alert" className="error-message">{t("An item is unavailable. Remove it before continuing.")}</p>:<form className="checkout-form" onSubmit={placeOrder} noValidate>{review?<div className="order-review"><span className="eyebrow">{t("One final check")}</span><h3>{t("Review your order")}</h3><dl><dt>{t("Your name")}</dt><dd>{customer.name}</dd><dt>{t("Phone number")}</dt><dd>{customer.phone}</dd><dt>{t("Delivery address")}</dt><dd>{customer.address}</dd>{customer.note&&<><dt>{t("Note")}</dt><dd>{customer.note}</dd></>}</dl><button className="text-link" type="button" disabled={busy} onClick={()=>setReview(false)}><Pencil size={15}/>{t("Edit contact details")}</button>{!demo&&(!checkoutReady||!inTelegram)&&<><details className="draft-preview"><summary>{t("View Telegram draft")}</summary><pre>{makeOrderDraft()}</pre></details><button type="button" className="secondary full" onClick={async()=>{try{await navigator.clipboard.writeText(makeOrderDraft());setToast("Order copied")}catch{setOrderError("Could not copy. Select the draft text instead.")}}}>{t("Copy order")}</button></>}</div>:<><h3>{t('Your contact details')}</h3><label htmlFor="checkout-name">{t("Your name")}<input id="checkout-name" aria-label={t("Your name")} autoComplete="name" required minLength={2} maxLength={100} value={customer.name} onChange={e=>changeCustomer('name',e.target.value)} placeholder={t("Full name")} aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name?'name-error':undefined}/>{fieldErrors.name&&<small id="name-error" className="field-error">{t(fieldErrors.name)}</small>}</label><label htmlFor="checkout-phone">{t("Phone number")}<input id="checkout-phone" aria-label={t("Phone number")} type="tel" inputMode="tel" autoComplete="tel" required minLength={7} maxLength={30} value={customer.phone} onChange={e=>changeCustomer('phone',phoneEntry(e.target.value))} onBlur={()=>{if(customer.phone.trim()==='+998')changeCustomer('phone','+998 ')}} placeholder="+998 90 123 45 67" aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone?'phone-error':undefined}/>{fieldErrors.phone&&<small id="phone-error" className="field-error">{t(fieldErrors.phone)}</small>}</label><label htmlFor="checkout-address">{t("Delivery address")}<textarea id="checkout-address" aria-label={t("Delivery address")} autoComplete="street-address" required minLength={5} maxLength={400} value={customer.address} onChange={e=>changeCustomer('address',e.target.value)} placeholder={t("City, street, building")} aria-invalid={!!fieldErrors.address} aria-describedby={fieldErrors.address?'address-error':undefined}/>{fieldErrors.address&&<small id="address-error" className="field-error">{t(fieldErrors.address)}</small>}</label><details className="optional-note"><summary>{t('Add a note')}</summary><label className="sr-only" htmlFor="checkout-note">{t('Note')}</label><textarea id="checkout-note" value={customer.note} maxLength={500} onChange={e=>changeCustomer('note',e.target.value)} placeholder={t('Your note to the store')}/></details></>}{orderError&&<p className="error-message" role="alert">{errorText(orderError,lang)}</p>}{draftOpened&&<p className="draft-status" role="status">{t("Your order draft opens in the store’s chat. Review it and tap Send in Telegram.")}</p>}<button disabled={busy} type="submit" className="primary full">{busy?<><Loader2 size={19} className="spin"/>{t("Sending…")}</>:<>{t(!review?'Review order':demo?'Complete demo order':checkoutReady&&inTelegram?'Send order request':'Continue in Telegram')}<Send size={19}/></>}</button><small>{t(checkoutReady&&inTelegram?"Order details are stored privately by Fragrance UZ to process and follow up your order.":"Contact details are shared with Fragrance UZ to arrange your order.")}</small></form>}</>:<div className="empty bag-empty"><ShoppingBag size={47} strokeWidth={1}/><h2>{t("A little space for a new scent.")}</h2><p>{t("Explore the collection and find your next favourite.")}</p><button className="primary" onClick={()=>{setCartOpen(false);navigate('catalog','all')}}>{t("Explore the collection")}<ArrowRight size={17}/></button></div>}</Modal>}
- {help&&<Modal title={t("About Fragrance UZ")} close={()=>setHelp(false)} className="help-modal"><button className="close-button" onClick={()=>setHelp(false)} aria-label={t("Close contact")}><X size={21}/></button><div className="about-brand"><Brand/></div><h2>{t('About Fragrance UZ')}</h2><p>{t('Original fragrances, chosen with care. Explore our collection or discover your next scent with a decant.')}</p><div className="about-delivery"><Truck size={25}/><div><strong>{t(settings.freeTashkentDelivery?'Free and quick delivery in Tashkent':'Delivery arranged with the store')}</strong><small>{t('Pay on receipt in Tashkent. We will agree a convenient delivery time with you.')}</small></div></div><div className="contact-list"><button onClick={()=>goExternal(settings.channelUrl)}><Send size={20}/><span>{t('Our Telegram channel')}<small>{socialHandle(settings.channelUrl)}</small></span><ArrowUpRight size={18}/></button><button onClick={()=>goExternal(settings.decantsUrl)}><Flower2 size={20}/><span>{t('Decants · Parf Bar')}<small>{socialHandle(settings.decantsUrl)}</small></span><ArrowUpRight size={18}/></button><button onClick={()=>goExternal(settings.instagramUrl)}><Camera size={20}/><span>Instagram<small>{socialHandle(settings.instagramUrl)}</small></span><ArrowUpRight size={18}/></button><button onClick={()=>goExternal(settings.managerUrl)}><MessageCircle size={20}/><span>{t("Talk to the store")}<small>{socialHandle(settings.managerUrl)}</small></span><ArrowUpRight size={18}/></button><a href={'tel:'+settings.phone}><span>{t("Phone")}</span><strong>{settings.phone}</strong></a><button onClick={()=>goExternal(settings.reviewsUrl)}><span>{t("Customer reviews")}</span><ArrowUpRight size={18}/></button></div><p className="fine-print">{t("Product information and prices come from the channel’s posts. The store confirms current availability, final price, delivery, and payment before an order is finalized.")}</p></Modal>}
- {toast&&<div className="toast" role="status"><Check size={17}/>{t(toast)}</div>}
- </>;
+type TG = {
+  initData: string;
+  initDataUnsafe?: { start_param?: string };
+  ready: () => void;
+  expand: () => void;
+  setHeaderColor?: (s: string) => void;
+  setBackgroundColor?: (s: string) => void;
+  setBottomBarColor?: (s: string) => void;
+  openTelegramLink?: (s: string) => void;
+  openLink?: (s: string) => void;
+  HapticFeedback?: { impactOccurred: (s: string) => void; notificationOccurred?: (s: string) => void; selectionChanged?: () => void };
+  BackButton?: { show: () => void; hide: () => void; onClick: (f: () => void) => void; offClick: (f: () => void) => void };
+  onEvent?: (s: string, f: () => void) => void;
+  offEvent?: (s: string, f: () => void) => void;
+  safeAreaInset?: { top?: number; bottom?: number };
+  contentSafeAreaInset?: { top?: number; bottom?: number };
+};
+declare global {
+  interface Window { Telegram?: { WebApp: TG } }
 }
 
- function ProductCard({p,index=0,saved,viewerRole,demo=false,openProduct,toggleSaved,add}:{p:Product;index?:number;saved:string[];viewerRole:string|null;demo?:boolean;openProduct:(p:Product)=>void;toggleSaved:(id:string)=>void;add:(p:Product,v:number)=>void}){const {t,lang}=useLanguage();const money=(n:number)=>formatMoney(n,lang);const bottle=(value:string)=>formatBottle(value,lang);const option=startingVariant(p);const genderLabel:Record<string,string>={women:t('For her'),men:t('For him'),unisex:t('Unisex'),unspecified:t('Fragrance')};return <article className="product-card" style={{animationDelay:Math.min(index,7)*45+'ms'}}><div className="product-image-wrap"><button className="product-image-button" aria-label={t('View')+': '+p.name} onClick={()=>openProduct(p)}>{p.image?<img src={p.image} alt={p.brand+' '+p.name} loading="lazy"/>:<Flower2 size={64} strokeWidth={.7}/>}</button><span className="product-tag">{genderLabel[p.gender]}</span><button className={'save-button '+(saved.includes(p.id)?'is-saved':'')} onClick={()=>toggleSaved(p.id)} aria-label={(saved.includes(p.id)?t('Unsave'):t('Save'))+': '+p.name}><Heart size={18} fill={saved.includes(p.id)?'currentColor':'none'}/></button><button className="quick-add" onClick={()=>add(p,option)} aria-label={t('Add to bag')+': '+p.name}><Plus size={19}/></button></div>{viewerRole&&<Link className="product-edit" href={(demo?'/demo?product=':'/admin?product=')+encodeURIComponent(p.id)}><Pencil size={13}/>{t("Edit fragrance")}</Link>}<button className="product-copy" onClick={()=>openProduct(p)}><span className="brand-label">{p.brand}</span><h3>{formatProductName(p.name,lang)}</h3>{p.year&&p.year!=='-'&&<span className="release-year">{t("Release year")}: {p.year.replace(/г\.?$/,'')}</span>}<span className="product-meta">{p.concentration&&<>{formatConcentration(p.concentration,lang)} <span>·</span> </>}{bottle(p.variants[option].label)}</span><strong>{money(p.variants[option].price)}</strong></button></article>}
+const WINE = '#4f0f15';
+const PAGE = { light: '#f6efe4', dark: '#140c0c' };
+const PAGE_SIZE = 24;
+const NEW_COUNT = 10;
+
+function saveLocal(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+function loadLocal<T>(key: string, fallback: T): T {
+  try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; }
+}
+function tg() {
+  return typeof window === 'undefined' ? undefined : window.Telegram?.WebApp;
+}
+function haptic(kind: 'light' | 'medium' | 'select' | 'success' | 'error' = 'light') {
+  const h = tg()?.initData ? tg()?.HapticFeedback : undefined;
+  try {
+    if (kind === 'select') h?.selectionChanged?.();
+    else if (kind === 'success' || kind === 'error') h?.notificationOccurred?.(kind);
+    else h?.impactOccurred(kind);
+  } catch {}
+}
+function goExternal(url: string) {
+  const w = tg();
+  if (url.startsWith('https://t.me/') && w?.initData && w.openTelegramLink) w.openTelegramLink(url);
+  else if (w?.initData && w.openLink) w.openLink(url);
+  else window.open(url, '_blank', 'noopener,noreferrer');
+}
+const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** A little bottle flies from what was tapped into the bag. */
+function flyToBag(from: Element | null, to: Element | null, src: string | null, background: string) {
+  if (!from || !to || reducedMotion()) return;
+  const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
+  const size = 66;
+  const el = document.createElement('div');
+  el.className = 'b-fly';
+  el.style.background = background;
+  el.style.left = a.left + a.width / 2 - size / 2 + 'px';
+  el.style.top = a.top + a.height / 2 - size / 2 + 'px';
+  if (src) {
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = '';
+    el.appendChild(img);
+  }
+  document.body.appendChild(el);
+  const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
+  const flight = el.animate(
+    [
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: `translate(${dx * 0.45}px,${dy * 0.45 - 90}px) scale(.85) rotate(-8deg)`, opacity: 1, offset: 0.5 },
+      { transform: `translate(${dx}px,${dy}px) scale(.22)`, opacity: 0.4 },
+    ],
+    { duration: 720, easing: 'cubic-bezier(.45,0,.25,1)' },
+  );
+  flight.onfinish = () => {
+    el.remove();
+    to.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.28)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
+  };
+}
+
+/** Line drawing of the Fragrance UZ bottle, after the channel logo. */
+function BottleMark({ className = '' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 120 150" fill="none" aria-hidden="true">
+      <rect x="38" y="6" width="44" height="24" rx="3" stroke="currentColor" strokeWidth="3" />
+      <path d="M46 30v12h28V30" stroke="currentColor" strokeWidth="3" />
+      <path d="M30 42h60M30 52h60" stroke="currentColor" strokeWidth="3" />
+      <path d="M22 52h76v90H22z" stroke="currentColor" strokeWidth="3" />
+      <path d="M36 66v66M84 66v66M36 66h48" stroke="currentColor" strokeWidth="2" opacity=".55" />
+    </svg>
+  );
+}
+
+function Shot({ p, onMeasure, eager = false }: { p: Product; onMeasure?: (img: HTMLImageElement) => void; eager?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  if (!p.image || failed)
+    return (
+      <div className="b-shot b-shot-empty">
+        <BottleMark />
+      </div>
+    );
+  return (
+    <div className="b-shot">
+      <img
+        src={p.image}
+        alt=""
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        onLoad={(e) => onMeasure?.(e.currentTarget)}
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
+function Sheet({ children, close, label, className = '' }: { children: React.ReactNode; close: () => void; label: string; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(close);
+  useEffect(() => {
+    closeRef.current = close;
+  }, [close]);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      const dialogs = document.querySelectorAll('[role=dialog]');
+      if (dialogs[dialogs.length - 1] === ref.current && e.key === 'Escape') closeRef.current();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      previous?.focus?.();
+    };
+  }, []);
+  return (
+    <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={label} className={'b-sheet ' + className}>
+      {children}
+    </div>
+  );
+}
+
+export default function Storefront() {
+  const { lang, setLang, t } = useLanguage();
+  const money = (n: number) => formatMoney(n, lang);
+  const bottle = (s: string) => formatBottle(s, lang);
+  const genderLabel: Record<string, string> = { women: t('For her'), men: t('For him'), unisex: t('Unisex'), unspecified: t('Fragrance') };
+
+  const [demo, setDemo] = useState(false), [demoAvailable, setDemoAvailable] = useState(false);
+  const [settings, setSettings] = useState<StoreSettings>(defaultSettings);
+  const [products, setProducts] = useState<Product[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+  const [startup, setStartup] = useState(true);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  const [tab, setTab] = useState<'home' | 'saved'>('home');
+  const [query, setQuery] = useState(''), [gender, setGender] = useState('all'), [brand, setBrand] = useState('all');
+  const [budget, setBudget] = useState<Budget>('all'), [concentration, setConcentration] = useState('all'), [color, setColor] = useState('all');
+  const [sort, setSort] = useState('latest'), [page, setPage] = useState({ key: '', count: PAGE_SIZE });
+
+  const [selected, setSelected] = useState<Product | null>(null), [variant, setVariant] = useState(0);
+  const [cartOpen, setCartOpen] = useState(false), [help, setHelp] = useState(false), [finder, setFinder] = useState(false), [filters, setFilters] = useState(false);
+  const [cart, setCart] = useState<CartItem[]>([]), [saved, setSaved] = useState<string[]>([]), [recent, setRecent] = useState<string[]>([]);
+  const [hydrated, setHydrated] = useState(false), [toast, setToast] = useState('');
+  const [extraTones, setExtraTones] = useState<Record<string, Tone>>({});
+  const [justAdded, setJustAdded] = useState(false);
+
+  const [checkoutReady, setCheckoutReady] = useState(false), [inTelegram, setInTelegram] = useState(false);
+  const [viewerRole, setViewerRole] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false), [orderResult, setOrderResult] = useState<{ orderId: string; notification: string } | null>(null);
+  const [orderError, setOrderError] = useState(''), [review, setReview] = useState(false), [draftOpened, setDraftOpened] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [customer, setCustomer] = useState({ name: '', phone: '+998 ', address: '', note: '' });
+  const [gift, setGift] = useState(false);
+
+  const requestKey = useRef('');
+  const searchRef = useRef<HTMLInputElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const sentinel = useRef<HTMLDivElement>(null);
+  const navBag = useRef<HTMLButtonElement>(null);
+  const sheetBag = useRef<HTMLButtonElement>(null);
+  const startParam = useRef<string | null>(null);
+  const storageKey = (name: string) => (demo ? 'fragranceuz-demo-' : 'fragranceuz-') + name;
+
+  /* ---------- boot ---------- */
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const demoMode = params.get('demo') === '1';
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration from the URL and browser storage
+    setDemo(demoMode);
+    const prefix = demoMode ? 'fragranceuz-demo-' : 'fragranceuz-';
+    // Saved bag, favourites and theme live in the browser, so they can only be read after mount.
+    setCart(cleanCart(loadLocal(prefix + 'cart', [])));
+    setSaved(cleanSaved(loadLocal(prefix + 'saved', [])));
+    setRecent(cleanSaved(loadLocal(prefix + 'recent', [])));
+    setCustomer((c) => ({ ...c, ...loadLocal<Partial<typeof c>>(prefix + 'customer', {}), note: '' }));
+    setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    setHydrated(true);
+    const w = tg();
+    startParam.current = w?.initDataUnsafe?.start_param || params.get('product');
+    if (w?.initData) {
+      setInTelegram(true);
+      w.ready();
+      w.expand();
+    }
+    const safe = () => {
+      const top = Math.max(w?.safeAreaInset?.top || 0, 0) + Math.max(w?.contentSafeAreaInset?.top || 0, 0);
+      const bottom = Math.max(w?.safeAreaInset?.bottom || 0, w?.contentSafeAreaInset?.bottom || 0);
+      document.documentElement.style.setProperty('--safe-top', top + 'px');
+      document.documentElement.style.setProperty('--safe-bottom', bottom + 'px');
+    };
+    safe();
+    w?.onEvent?.('safeAreaChanged', safe);
+    w?.onEvent?.('contentSafeAreaChanged', safe);
+    document.documentElement.classList.add('boutique');
+    refresh(true);
+    return () => {
+      w?.offEvent?.('safeAreaChanged', safe);
+      w?.offEvent?.('contentSafeAreaChanged', safe);
+      document.documentElement.classList.remove('boutique');
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function refresh(first = false) {
+    const started = Date.now();
+    setLoading(true);
+    setError('');
+    try {
+      const r = await fetch(new URLSearchParams(location.search).get('demo') === '1' ? '/api/demo' : '/api/store', {
+        headers: { 'x-telegram-init-data': tg()?.initData || '' },
+        signal: AbortSignal.timeout(15000),
+      });
+      const d = (await r.json()) as {
+        error?: string; products: Product[]; checkoutReady: boolean; viewerRole: string | null; settings: StoreSettings; demo?: boolean; demoAvailable?: boolean;
+      };
+      if (!r.ok) throw new Error(d.error);
+      setDemo(!!d.demo);
+      setDemoAvailable(!!d.demoAvailable);
+      setProducts(d.products);
+      setCart((current) => {
+        let changed = false;
+        const next = current.map((row) => {
+          const option = d.products.find((p) => p.id === row.id)?.variants[row.variant];
+          if (row.expectedLabel === undefined && option) {
+            changed = true;
+            return { ...row, expectedLabel: option.label };
+          }
+          return row;
+        });
+        return changed ? next : current;
+      });
+      setSettings(d.settings);
+      setCheckoutReady(d.checkoutReady);
+      setViewerRole(d.viewerRole);
+      if (first && startParam.current) {
+        const target = d.products.find((p) => p.id === startParam.current);
+        if (target) openProduct(target);
+      }
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'Could not load catalog');
+    } finally {
+      setLoading(false);
+      if (first) setTimeout(() => setStartup(false), Math.max(0, 900 - (Date.now() - started)));
+    }
+  }
+
+  /* ---------- persistence & housekeeping ---------- */
+  useEffect(() => {
+    if (!hydrated) return;
+    saveLocal(storageKey('cart'), cart);
+    // A changed bag invalidates the reviewed order and its idempotency key.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReview(false);
+    requestKey.current = '';
+    setOrderError('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart, hydrated]);
+  useEffect(() => {
+    if (hydrated) saveLocal(storageKey('saved'), saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved, hydrated]);
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(''), 2400);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  const overlay = Boolean(selected || cartOpen || help || finder || filters);
+  useEffect(() => {
+    document.documentElement.classList.toggle('b-locked', overlay);
+  }, [overlay]);
+
+  /* ---------- Telegram chrome follows the screen ---------- */
+  const selectedTone = selected ? toneOf(selected.id, extraTones).tone : '';
+  useEffect(() => {
+    const w = tg();
+    if (!w?.initData) return;
+    const page = PAGE[theme];
+    const header = selected ? tints(selectedTone).stage : cartOpen || help || filters ? page : WINE;
+    try {
+      w.setHeaderColor?.(header);
+      w.setBackgroundColor?.(page);
+      w.setBottomBarColor?.(page);
+    } catch {}
+  }, [selected, selectedTone, cartOpen, help, filters, finder, theme]);
+
+  useEffect(() => {
+    const w = tg();
+    const back = () => {
+      if (busy) return;
+      if (filters) setFilters(false);
+      else if (finder) setFinder(false);
+      else if (selected) setSelected(null);
+      else if (cartOpen) setCartOpen(false);
+      else if (help) setHelp(false);
+      else goHome();
+    };
+    if (w?.initData && w.BackButton) {
+      if (overlay || tab !== 'home') w.BackButton.show();
+      else w.BackButton.hide();
+      w.BackButton.onClick(back);
+      return () => w.BackButton?.offClick(back);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, cartOpen, help, finder, filters, tab, busy, overlay]);
+
+  /* ---------- tones ---------- */
+  function measure(p: Product, img: HTMLImageElement) {
+    if (hasTone(p.id, extraTones)) return;
+    const tone = measureTone(img);
+    if (tone) setExtraTones((x) => ({ ...x, [p.id]: tone }));
+  }
+  const tintOf = (p: Product) => tints(toneOf(p.id, extraTones).tone);
+  const tintStyle = (p: Product) => {
+    const x = tintOf(p);
+    return { '--niche': x.niche, '--niche-dark': x.nicheDark, '--stage': x.stage } as React.CSSProperties;
+  };
+
+  /* ---------- catalog ---------- */
+  const newest = useMemo(() => [...products].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, NEW_COUNT), [products]);
+  const newIds = useMemo(() => new Set(newest.map((p) => p.id)), [newest]);
+  const houses = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of products) if (p.brand) counts.set(p.brand, (counts.get(p.brand) || 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [products]);
+  const familyCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of products) {
+      const f = toneOf(p.id, extraTones).family;
+      if (f) counts[f] = (counts[f] || 0) + 1;
+    }
+    return counts;
+  }, [products, extraTones]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return products
+      .filter(
+        (p) =>
+          (tab !== 'saved' || saved.includes(p.id)) &&
+          (gender === 'all' || p.gender === gender) &&
+          (brand === 'all' || p.brand === brand) &&
+          inBudget(p.variants[cheapest(p)].price, budget) &&
+          (concentration === 'all' || concentrationGroup(p.concentration) === concentration) &&
+          (color === 'all' || toneOf(p.id, extraTones).family === color) &&
+          (!q || `${p.name} ${p.brand} ${p.title}`.toLowerCase().includes(q)),
+      )
+      .sort((a, b) => {
+        const pa = a.variants[cheapest(a)].price, pb = b.variants[cheapest(b)].price;
+        if (sort === 'price-asc') return pa - pb;
+        if (sort === 'price-desc') return pb - pa;
+        if (sort === 'name') return displayName(a.name).localeCompare(displayName(b.name));
+        return Number(b.id) - Number(a.id);
+      });
+  }, [products, tab, saved, gender, brand, budget, concentration, color, query, sort, extraTones]);
+
+  // Infinite scroll restarts whenever the shopper changes what they are looking at.
+  const pageKey = [tab, query, gender, brand, budget, concentration, color, sort].join('|');
+  const shown = page.key === pageKey ? page.count : PAGE_SIZE;
+  const activeFilters = [brand !== 'all', budget !== 'all', concentration !== 'all', color !== 'all'].filter(Boolean).length;
+  const browsing = tab === 'home' && !query.trim() && activeFilters === 0 && gender === 'all';
+
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && shown < filtered.length) setPage({ key: pageKey, count: shown + PAGE_SIZE });
+    }, { rootMargin: '600px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [filtered.length, shown, pageKey]);
+
+  /* ---------- actions ---------- */
+  function scrollToGrid() {
+    requestAnimationFrame(() => {
+      const top = (gridRef.current?.getBoundingClientRect().top || 0) + window.scrollY - 70;
+      window.scrollTo({ top, behavior: reducedMotion() ? 'auto' : 'smooth' });
+    });
+  }
+  function resetFilters() {
+    setGender('all');
+    setBrand('all');
+    setBudget('all');
+    setConcentration('all');
+    setColor('all');
+  }
+  function goHome() {
+    setTab('home');
+    setQuery('');
+    resetFilters();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function openSaved() {
+    setTab('saved');
+    setQuery('');
+    resetFilters();
+    window.scrollTo({ top: 0 });
+  }
+  function focusSearch() {
+    setTab('home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => searchRef.current?.focus(), 250);
+  }
+  function chooseFamily(id: string) {
+    haptic('select');
+    setColor((c) => (c === id ? 'all' : id));
+    scrollToGrid();
+  }
+  function chooseHouse(name: string) {
+    haptic('select');
+    setBrand((b) => (b === name ? 'all' : name));
+    scrollToGrid();
+  }
+  function toggleSaved(id: string) {
+    haptic('light');
+    setSaved((x) => (x.includes(id) ? x.filter((i) => i !== id) : [...x, id]));
+  }
+  function openProduct(p: Product) {
+    haptic('light');
+    setSelected(p);
+    setVariant(cheapest(p));
+    setJustAdded(false);
+    setRecent((current) => {
+      const next = [p.id, ...current.filter((id) => id !== p.id)].slice(0, 10);
+      saveLocal(storageKey('recent'), next);
+      return next;
+    });
+  }
+  function add(p: Product, v: number, from: Element | null, target: Element | null) {
+    const existing = cart.find((x) => x.id === p.id && x.variant === v);
+    if (existing && existing.quantity >= 10) return setToast('Maximum 10 bottles per option');
+    if (!existing && cart.length >= 15) return setToast('Maximum 15 bottle options per order');
+    setCart((c) => {
+      const match = c.find((x) => x.id === p.id && x.variant === v);
+      return match
+        ? c.map((x) => (x === match ? { ...x, quantity: Math.min(10, x.quantity + 1) } : x))
+        : [...c, { id: p.id, variant: v, quantity: 1, expectedLabel: p.variants[v].label }];
+    });
+    setOrderResult(null);
+    flyToBag(from, target, p.image, tintOf(p).niche);
+    haptic('success');
+    setToast('Added to your bag');
+  }
+  function shareHint(p: Product) {
+    const text = `${t('I would love this fragrance as a gift')}\n${p.brand} — ${displayName(p.name)}`;
+    goExternal('https://t.me/share/url?url=' + encodeURIComponent(p.sourceUrl) + '&text=' + encodeURIComponent(text));
+  }
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    setTheme(next);
+    try { localStorage.setItem('fragranceuz-theme', next); } catch {}
+  }
+
+  /* ---------- bag & checkout (same request contract as before) ---------- */
+  const cartRows = cart.map((row) => ({ ...row, product: products.find((x) => x.id === row.id) }));
+  const cartCount = cart.reduce((s, x) => s + x.quantity, 0);
+  const cartTotal = cartRows.reduce((s, x) => s + (x.product?.variants[x.variant]?.price || 0) * x.quantity, 0);
+  const invalidCart = cartRows.some(
+    (x) => !x.product || !x.product.variants[x.variant] || (x.expectedLabel !== undefined && x.expectedLabel !== x.product.variants[x.variant]?.label),
+  );
+  function changeQty(id: string, v: number, d: number) {
+    haptic('select');
+    setCart((c) => c.map((x) => (x.id === id && x.variant === v ? { ...x, quantity: Math.min(10, x.quantity + d) } : x)).filter((x) => x.quantity > 0));
+  }
+  function withGift(details: typeof customer) {
+    if (!gift) return details;
+    return { ...details, note: [t('Gift note'), details.note.trim()].filter(Boolean).join(' · ').slice(0, 500) };
+  }
+  function makeOrderDraft(details = customer) {
+    return composeOrderDraft(
+      details,
+      cartRows
+        .filter((x) => x.product && x.product.variants[x.variant])
+        .map((x) => ({
+          name: x.product!.name, brand: x.product!.brand, label: x.product!.variants[x.variant].label,
+          price: x.product!.variants[x.variant].price, quantity: x.quantity,
+        })),
+      lang,
+    );
+  }
+  function changeCustomer(field: keyof typeof customer, value: string) {
+    requestKey.current = '';
+    setReview(false);
+    setDraftOpened(false);
+    setCustomer((current) => ({ ...current, [field]: value }));
+    setFieldErrors((current) => ({ ...current, [field]: '' }));
+  }
+  async function placeOrder(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setOrderError('');
+    setFieldErrors({});
+    const checked = customerInput.safeParse(withGift(customer));
+    if (!checked.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of checked.error.issues) {
+        const field = String(issue.path[0]);
+        errors[field] = field === 'name' ? 'Please enter your full name' : field === 'phone' ? 'Please enter a valid phone number' : 'Please enter your delivery address';
+      }
+      setFieldErrors(errors);
+      haptic('error');
+      document.getElementById('checkout-' + Object.keys(errors)[0])?.focus();
+      return;
+    }
+    if (invalidCart || cart.length === 0) return;
+    saveLocal(storageKey('customer'), { name: customer.name, phone: customer.phone, address: customer.address });
+    if (!review) {
+      setReview(true);
+      haptic('medium');
+      return;
+    }
+    if (demo) {
+      setOrderResult({ orderId: 'demo-' + crypto.randomUUID(), notification: 'demo' });
+      setCart([]);
+      return;
+    }
+    if (!checkoutReady || !inTelegram) {
+      goExternal(settings.managerUrl + '?text=' + encodeURIComponent(makeOrderDraft(checked.data)));
+      setDraftOpened(true);
+      return;
+    }
+    setBusy(true);
+    if (!requestKey.current) requestKey.current = crypto.randomUUID();
+    try {
+      const r = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': tg()?.initData || '', 'x-store-language': lang },
+        body: JSON.stringify({ requestKey: requestKey.current, language: lang, quotedTotal: cartTotal, customer: checked.data, items: cart }),
+      });
+      const d = (await r.json()) as { error?: string; orderId: string; notification: string };
+      if (!r.ok) {
+        if (r.status === 409) {
+          setReview(false);
+          await refresh();
+        }
+        throw new Error(d.error);
+      }
+      haptic('success');
+      setOrderResult(d);
+      setCart([]);
+      setGift(false);
+      setCustomer((c) => ({ ...c, note: '' }));
+    } catch (err) {
+      haptic('error');
+      setOrderError(err instanceof Error && err.message ? err.message : 'Could not send order. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /* ---------- render helpers ---------- */
+  const card = (p: Product, index = 0) => {
+    const v = cheapest(p);
+    const option = p.variants[v];
+    const special = /Tester|Остаток|Set/i.exec(option.label)?.[0];
+    return (
+      <article key={p.id} className="b-card" style={{ ...tintStyle(p), animationDelay: Math.min(index % PAGE_SIZE, 12) * 35 + 'ms' }}>
+        <button className="b-niche" onClick={() => openProduct(p)} aria-label={t('View') + ': ' + p.brand + ' ' + p.name}>
+          <Shot p={p} onMeasure={(img) => measure(p, img)} />
+          {newIds.has(p.id) ? <span className="b-badge">{t('New')}</span> : special ? <span className="b-badge soft">{bottle(special)}</span> : null}
+        </button>
+        <button
+          className={'b-heart ' + (saved.includes(p.id) ? 'on' : '')}
+          onClick={() => toggleSaved(p.id)}
+          aria-pressed={saved.includes(p.id)}
+          aria-label={(saved.includes(p.id) ? t('Unsave') : t('Save')) + ': ' + p.name}
+        >
+          <Heart size={17} />
+        </button>
+        <button className="b-card-copy" onClick={() => openProduct(p)} tabIndex={-1}>
+          <span className="b-house">{p.brand}</span>
+          <span className="b-name">{displayName(p.name)}</span>
+          <span className="b-meta">
+            {[shortConcentration(p.concentration), bottle(option.label.replace(/ · (Tester|Остаток|Set|Gift Set)/i, ''))].filter(Boolean).join(' · ')}
+          </span>
+        </button>
+        <div className="b-price-row">
+          <strong>
+            {p.variants.length > 1 && <small>{t('from')} </small>}
+            {money(option.price)}
+          </strong>
+          <button className="b-quick" onClick={(e) => add(p, v, e.currentTarget.closest('.b-card'), navBag.current)} aria-label={t('Add to bag') + ': ' + p.name}>
+            <Plus size={18} />
+          </button>
+        </div>
+        {viewerRole && (
+          <a className="b-edit" href={(demo ? '/demo?product=' : '/admin?product=') + encodeURIComponent(p.id)}>
+            <Pencil size={12} />
+            {t('Edit fragrance')}
+          </a>
+        )}
+      </article>
+    );
+  };
+
+  const visible = filtered.slice(0, shown);
+  const recentProducts = recent.map((id) => products.find((p) => p.id === id)).filter((p): p is Product => Boolean(p));
+
+  return (
+    <div className="bq">
+      {startup && (
+        <div className="b-splash" role="status" aria-label={t('Loading collection')}>
+          <div className="b-splash-mark">
+            <img src="/brand/fragranceuz-gold.svg" alt="FRAGRANCE UZ" width="210" height="166" />
+            <span className="b-shimmer" />
+          </div>
+          <p>{t('Since 2018')}</p>
+        </div>
+      )}
+
+      {demo && (
+        <div className="b-demo">
+          <span>{t('Demo storefront')}</span>
+          <a href="/demo">
+            {t('Demo admin')}
+            <Settings2 size={14} />
+          </a>
+        </div>
+      )}
+
+      {/* ---------- hero ---------- */}
+      <header className={'b-hero ' + (tab === 'saved' ? 'compact' : '')}>
+        <BottleMark className="b-hero-art" />
+        <div className="b-topbar">
+          <button className="b-logo" onClick={goHome} aria-label={t('Fragrance UZ home')}>
+            <img src="/brand/fragranceuz-gold.svg" alt="FRAGRANCE UZ" width="92" height="73" />
+          </button>
+          <div className="b-top-actions">
+            {viewerRole && (
+              <a href={demo ? '/demo' : '/admin'} className="b-round" aria-label={t('Store management')} title={t('Store management')}>
+                <Settings2 size={18} />
+              </a>
+            )}
+            <button className="b-round" onClick={toggleTheme} aria-label={t(theme === 'dark' ? 'Use light mode' : 'Use dark mode')}>
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <LanguageSwitch lang={lang} setLang={setLang} />
+          </div>
+        </div>
+        {tab === 'saved' ? (
+          <h1 className="b-hero-title">
+            <em>{t('Saved')}</em>
+          </h1>
+        ) : (
+          <>
+            <h1 className="b-hero-title">
+              {t('heroTitleA')}
+              <br />
+              <em>{t('heroTitleB')}</em>
+            </h1>
+            <p className="b-hero-sub">
+              {products.length ? fragranceCount(products.length, lang) : ' '} · {t('Tashkent · since 2018')}
+            </p>
+            <label className="b-search">
+              <Search size={19} />
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('Search a fragrance or a house…')}
+                aria-label={t('Search fragrances')}
+                enterKeyHint="search"
+                onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget.blur(), scrollToGrid())}
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery('')} aria-label={t('Clear search')}>
+                  <X size={17} />
+                </button>
+              )}
+            </label>
+          </>
+        )}
+      </header>
+
+      <main className="b-main">
+        {demoAvailable && !demo && !viewerRole && tab === 'home' && (
+          <a className="b-demo-entry" href="/demo">
+            <Settings2 size={16} />
+            {t('Demo admin')}
+            <ArrowRight size={15} />
+          </a>
+        )}
+
+        {error && !products.length && (
+          <div className="b-empty">
+            <BottleMark className="b-empty-mark" />
+            <h2>{t(error)}</h2>
+            <button className="b-btn" onClick={() => refresh()}>
+              {t('Try again')}
+            </button>
+          </div>
+        )}
+
+        {browsing && products.length > 0 && (
+          <>
+            {/* ---------- new in the window ---------- */}
+            <section className="b-section">
+              <div className="b-section-head">
+                <h2>
+                  {t('New in the window')}
+                </h2>
+                <span className="b-count">01—{String(newest.length).padStart(2, '0')}</span>
+              </div>
+              <div className="b-rail b-showcase" role="list" aria-label={t('Latest arrivals')}>
+                {newest.map((p, i) => (
+                  <button key={p.id} role="listitem" className="b-feature" style={tintStyle(p)} onClick={() => openProduct(p)}>
+                    <span className="b-feature-no">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="b-feature-stage">
+                      <Shot p={p} eager={i < 3} onMeasure={(img) => measure(p, img)} />
+                    </span>
+                    <span className="b-house">{p.brand}</span>
+                    <span className="b-feature-name">{displayName(p.name)}</span>
+                    <span className="b-feature-price">{money(p.variants[cheapest(p)].price)}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* ---------- finder invitation ---------- */}
+            <section className="b-section">
+              <button className="b-invite" onClick={() => { haptic('medium'); setFinder(true); }}>
+                <span className="b-invite-icon">
+                  <Sparkles size={22} />
+                </span>
+                <span>
+                  <strong>{t('Not sure where to start?')}</strong>
+                  <small>{t('We will find your scent in three steps')}</small>
+                </span>
+                <ArrowRight size={20} />
+              </button>
+            </section>
+
+            {/* ---------- bottle colour ---------- */}
+            <section className="b-section">
+              <div className="b-section-head">
+                <h2>{t('Choose by bottle colour')}</h2>
+              </div>
+              <p className="b-section-sub">{t('Remember the bottle, not the name? Start here.')}</p>
+              <div className="b-rail b-swatches">
+                {FAMILIES.filter((f) => (familyCounts[f.id] || 0) >= 3).map((f) => (
+                  <button key={f.id} className="b-swatch" onClick={() => chooseFamily(f.id)}>
+                    <span className="b-swatch-dot" style={{ background: f.swatch }} />
+                    <span>{t(f.label)}</span>
+                    <small>{familyCounts[f.id]}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* ---------- houses ---------- */}
+            <section className="b-section">
+              <div className="b-section-head">
+                <h2>{t('Houses')}</h2>
+                <span className="b-count">{houses.length}</span>
+              </div>
+              <div className="b-rail b-houses">
+                {houses.slice(0, 14).map(([name, count]) => (
+                  <button key={name} className="b-house-chip" onClick={() => chooseHouse(name)}>
+                    <span className="b-monogram">{name.replace(/[^A-Za-zА-Яа-я]/g, '').slice(0, 1)}</span>
+                    <span>
+                      {name}
+                      <small>{count}</small>
+                    </span>
+                  </button>
+                ))}
+                <button className="b-house-chip more" onClick={() => setFilters(true)}>
+                  <span>{t('All houses')}</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            </section>
+
+            {recentProducts.length > 1 && (
+              <section className="b-section">
+                <div className="b-section-head">
+                  <h2>{t('Recently viewed')}</h2>
+                </div>
+                <div className="b-rail b-recent">
+                  {recentProducts.map((p) => (
+                    <button key={p.id} className="b-recent-item" style={tintStyle(p)} onClick={() => openProduct(p)} aria-label={p.brand + ' ' + p.name}>
+                      <span className="b-recent-orb">
+                        <Shot p={p} />
+                      </span>
+                      <small>{displayName(p.name)}</small>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+
+        {/* ---------- collection ---------- */}
+        {(products.length > 0 || loading) && (
+          <section className="b-section b-collection" ref={gridRef}>
+            {tab === 'home' && (
+              <div className="b-section-head">
+                <h2>{query.trim() ? t('Search results') : t('The collection')}</h2>
+                <span className="b-count">{loading && !products.length ? '' : fragranceCount(filtered.length, lang)}</span>
+              </div>
+            )}
+            <div className="b-toolbar">
+              <div className="b-segment" role="group" aria-label={t('Audience')}>
+                {[['all', 'All'], ['women', 'Women'], ['men', 'Men'], ['unisex', 'Unisex']].map(([id, label]) => (
+                  <button key={id} className={gender === id ? 'on' : ''} aria-pressed={gender === id} onClick={() => { haptic('select'); setGender(id); }}>
+                    {t(label)}
+                  </button>
+                ))}
+              </div>
+              <button className={'b-filter-btn ' + (activeFilters ? 'on' : '')} onClick={() => setFilters(true)} aria-label={t('Filters')}>
+                <SlidersHorizontal size={18} />
+                {activeFilters > 0 && <span>{activeFilters}</span>}
+              </button>
+            </div>
+            {activeFilters > 0 && (
+              <div className="b-active">
+                {color !== 'all' && (
+                  <button onClick={() => setColor('all')}>
+                    <i style={{ background: FAMILIES.find((f) => f.id === color)?.swatch }} />
+                    {t(FAMILIES.find((f) => f.id === color)?.label || '')}
+                    <X size={13} />
+                  </button>
+                )}
+                {brand !== 'all' && (
+                  <button onClick={() => setBrand('all')}>
+                    {brand}
+                    <X size={13} />
+                  </button>
+                )}
+                {budget !== 'all' && (
+                  <button onClick={() => setBudget('all')}>
+                    {t({ u1: 'Up to 1 million', u25: 'Up to 2.5 million', lux: 'Exclusive · from 2.5 million' }[budget])}
+                    <X size={13} />
+                  </button>
+                )}
+                {concentration !== 'all' && (
+                  <button onClick={() => setConcentration('all')}>
+                    {({ edt: 'EDT', edp: 'EDP', parfum: 'Parfum', extrait: 'Extrait' } as Record<string, string>)[concentration]}
+                    <X size={13} />
+                  </button>
+                )}
+                <button className="clear" onClick={resetFilters}>
+                  {t('Reset filters')}
+                </button>
+              </div>
+            )}
+
+            {loading && !products.length ? (
+              <div className="b-grid">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} className="b-card b-skeleton">
+                    <div className="b-niche" />
+                    <span />
+                    <span />
+                  </div>
+                ))}
+              </div>
+            ) : filtered.length ? (
+              <>
+                <div className="b-grid">{visible.map((p, i) => card(p, i))}</div>
+                {shown < filtered.length && (
+                  <div ref={sentinel} className="b-more">
+                    <Loader2 size={20} className="b-spin" />
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="b-empty">
+                <BottleMark className="b-empty-mark" />
+                <h2>{tab === 'saved' ? t('Keep a little inspiration.') : t('No fragrances found.')}</h2>
+                <p>{tab === 'saved' ? t('Tap the heart on a fragrance to save it here.') : t('Try another name, fragrance house, or price.')}</p>
+                <button className="b-btn" onClick={() => (tab === 'saved' ? goHome() : (resetFilters(), setQuery('')))}>
+                  {tab === 'saved' ? t('Explore the collection') : t('Clear filters')}
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
+        <footer className="b-footer">
+          <BottleMark className="b-footer-mark" />
+          <p className="b-footer-name">FRAGRANCE UZ</p>
+          <p>{t('Prices from channel posts · availability confirmed on request')}</p>
+          <div>
+            <button onClick={() => goExternal(settings.channelUrl)}>{socialHandle(settings.channelUrl)}</button>
+            <button onClick={() => goExternal(settings.instagramUrl)}>Instagram</button>
+            <button onClick={() => setHelp(true)}>{t('About us')}</button>
+          </div>
+        </footer>
+      </main>
+
+      {/* ---------- floating navigation ---------- */}
+      <nav className={'b-nav ' + (overlay ? 'hidden' : '')} aria-label={t('Main navigation')}>
+        <button className={tab === 'home' ? 'on' : ''} onClick={goHome} aria-label={t('Home')}>
+          <Home size={21} />
+        </button>
+        <button onClick={focusSearch} aria-label={t('Search fragrances')}>
+          <Search size={21} />
+        </button>
+        <button className={tab === 'saved' ? 'on' : ''} onClick={openSaved} aria-label={t('Saved fragrances')}>
+          <Heart size={21} />
+          {saved.length > 0 && <i className="b-dot" />}
+        </button>
+        <button ref={navBag} onClick={() => { setCartOpen(true); setOrderResult((r) => (cart.length ? null : r)); }} aria-label={t('Bag') + ': ' + cartCount}>
+          <ShoppingBag size={21} />
+          {cartCount > 0 && <span className="b-badge-count">{cartCount}</span>}
+        </button>
+        <button onClick={() => setHelp(true)} aria-label={t('About us')}>
+          <Info size={21} />
+        </button>
+      </nav>
+
+      {toast && (
+        <div className="b-toast" role="status">
+          <Check size={16} />
+          {t(toast)}
+        </div>
+      )}
+
+      {/* ---------- product ---------- */}
+      {selected && (() => {
+        const p = selected;
+        const option = p.variants[variant] || p.variants[0];
+        const inBag = cart.some((x) => x.id === p.id && x.variant === variant);
+        const related = relatedProducts(p, products);
+        return (
+          <Sheet label={p.brand + ' ' + p.name} close={() => setSelected(null)} className="b-product">
+            <div className="b-stage" style={tintStyle(p)}>
+              <div className="b-stage-bar">
+                <button className="b-glass" onClick={() => setSelected(null)} aria-label={t('Close product')}>
+                  <ChevronDown size={22} />
+                </button>
+                <div>
+                  <button
+                    className={'b-glass ' + (saved.includes(p.id) ? 'on' : '')}
+                    onClick={() => toggleSaved(p.id)}
+                    aria-pressed={saved.includes(p.id)}
+                    aria-label={saved.includes(p.id) ? t('Unsave') : t('Save fragrance')}
+                  >
+                    <Heart size={19} />
+                  </button>
+                  <button ref={sheetBag} className="b-glass" onClick={() => { setSelected(null); setCartOpen(true); }} aria-label={t('Bag') + ': ' + cartCount}>
+                    <ShoppingBag size={19} />
+                    {cartCount > 0 && <span className="b-badge-count">{cartCount}</span>}
+                  </button>
+                </div>
+              </div>
+              <div className="b-stage-bottle" key={p.id}>
+                <Shot p={p} eager />
+              </div>
+            </div>
+            <div className="b-panel">
+              <p className="b-panel-house">{p.brand}</p>
+              <h2 className="b-panel-name">{displayName(p.name)}</h2>
+              <div className="b-tags">
+                {p.concentration && <span>{formatConcentration(p.concentration, lang)}</span>}
+                <span>{genderLabel[p.gender] || t('Fragrance')}</span>
+                {p.year && p.year !== '-' && <span>{p.year.replace(/г\.?$/, '')}</span>}
+                {p.country && <span>{formatCountry(p.country, lang)}</span>}
+              </div>
+
+              <h3 className="b-label">{t('SELECT YOUR BOTTLE')}</h3>
+              <div className="b-volumes" role="radiogroup" aria-label={t('Volume')}>
+                {p.variants.map((v, i) => (
+                  <button
+                    key={i}
+                    role="radio"
+                    aria-checked={variant === i}
+                    className={variant === i ? 'on' : ''}
+                    onClick={() => { haptic('select'); setVariant(i); setJustAdded(false); }}
+                  >
+                    <strong>{bottle(v.label)}</strong>
+                    <small>{money(v.price)}</small>
+                  </button>
+                ))}
+              </div>
+              <p className="b-fine">{t('Availability & final price confirmed on request')}</p>
+
+              {p.fragranticaUrl && (
+                <button className="b-link-card" onClick={() => goExternal(p.fragranticaUrl!)}>
+                  <span className="b-link-icon">
+                    <Droplets size={20} />
+                  </span>
+                  <span>
+                    <strong>{t('Discover the scent')}</strong>
+                    <small>{t('Notes & scent profile on Fragrantica')}</small>
+                  </span>
+                  <ArrowUpRight size={19} />
+                </button>
+              )}
+              <button className="b-link-card gift" onClick={() => shareHint(p)}>
+                <span className="b-link-icon">
+                  <Gift size={20} />
+                </span>
+                <span>
+                  <strong>{t('Hint at a gift')}</strong>
+                  <small>{t('Send this fragrance to someone close')}</small>
+                </span>
+                <Send size={18} />
+              </button>
+              <button className="b-link-card subtle" onClick={() => goExternal(p.sourceUrl)}>
+                <span className="b-link-icon">
+                  <MessageCircle size={20} />
+                </span>
+                <span>
+                  <strong>{t('Original channel post')}</strong>
+                  <small>{socialHandle(settings.channelUrl)}</small>
+                </span>
+                <ArrowUpRight size={19} />
+              </button>
+
+              {viewerRole && (
+                <a className="b-edit wide" href={(demo ? '/demo?product=' : '/admin?product=') + encodeURIComponent(p.id)}>
+                  <Pencil size={14} />
+                  {t('Edit fragrance')}
+                </a>
+              )}
+
+              {related.length > 0 && (
+                <>
+                  <h3 className="b-label">{t('More to explore')}</h3>
+                  <div className="b-rail b-related">
+                    {related.map((r) => (
+                      <button key={r.id} className="b-mini" style={tintStyle(r)} onClick={() => openProduct(r)}>
+                        <span className="b-mini-niche">
+                          <Shot p={r} />
+                        </span>
+                        <span className="b-house">{r.brand}</span>
+                        <span className="b-mini-name">{displayName(r.name)}</span>
+                        <span className="b-mini-price">{money(r.variants[cheapest(r)].price)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="b-buybar">
+              <button
+                className={'b-buy ' + (justAdded ? 'done' : '')}
+                onClick={(e) => {
+                  add(p, variant, document.querySelector('.b-stage-bottle'), sheetBag.current || e.currentTarget);
+                  setJustAdded(true);
+                }}
+              >
+                {justAdded ? (
+                  <>
+                    <Check size={19} />
+                    <span>{t('Add one more')}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{money(option.price)}</span>
+                    <span className="b-buy-sep" />
+                    <span>{inBag ? t('Add one more') : t('Add to bag')}</span>
+                  </>
+                )}
+              </button>
+              {(justAdded || inBag) && (
+                <button className="b-buy-go" onClick={() => { setSelected(null); setCartOpen(true); }} aria-label={t('Open bag')}>
+                  <ArrowRight size={20} />
+                </button>
+              )}
+            </div>
+          </Sheet>
+        );
+      })()}
+
+      {/* ---------- bag & checkout ---------- */}
+      {cartOpen && (
+        <Sheet label={t('Your shopping bag')} close={() => !busy && setCartOpen(false)} className="b-bag">
+          <div className="b-sheet-head">
+            <div>
+              <span className="b-eyebrow">{t('A LITTLE SOMETHING FOR YOU')}</span>
+              <h2>{t('Your bag')}</h2>
+            </div>
+            <button className="b-round dark" disabled={busy} onClick={() => setCartOpen(false)} aria-label={t('Close bag')}>
+              <X size={20} />
+            </button>
+          </div>
+
+          {orderResult ? (
+            <div className="b-success">
+              <div className="b-seal">
+                <BottleMark />
+                <Check size={26} className="b-seal-check" />
+              </div>
+              <h3>{t('Your request is saved.')}</h3>
+              <p className="b-ref">
+                {t('Reference')} #{orderResult.orderId.slice(0, 8)}
+              </p>
+              <p>
+                {orderResult.notification === 'demo'
+                  ? t('This was a demonstration. No order was sent and no contact details were saved.')
+                  : orderResult.notification === 'sent'
+                    ? t('The store has received your request in Telegram and will confirm availability, final pricing, and delivery.')
+                    : orderResult.notification === 'failed'
+                      ? t('Your request is safely saved. The Telegram alert could not be delivered; please contact the store with your reference.')
+                      : t('Your request is saved; the Telegram alert is pending. Please keep your reference.')}
+              </p>
+              <button className="b-btn ghost" onClick={() => goExternal(settings.managerUrl)}>
+                <MessageCircle size={18} />
+                {t('Contact the store')}
+              </button>
+              <button className="b-btn" onClick={() => { setOrderResult(null); setCartOpen(false); goHome(); }}>
+                {t('Continue exploring')}
+              </button>
+            </div>
+          ) : cart.length === 0 ? (
+            <div className="b-empty in-sheet">
+              <BottleMark className="b-empty-mark" />
+              <h3>{t('A little space for a new scent.')}</h3>
+              <p>{t('Explore the collection and find your next favourite.')}</p>
+              <button className="b-btn" onClick={() => setCartOpen(false)}>
+                {t('Explore the collection')}
+              </button>
+            </div>
+          ) : (
+            <form className="b-checkout" onSubmit={placeOrder} noValidate>
+              <ul className="b-lines">
+                {cartRows.map((x) => {
+                  const v = x.product?.variants[x.variant];
+                  return (
+                    <li key={x.id + ':' + x.variant} className="b-line" style={x.product ? tintStyle(x.product) : undefined}>
+                      <button type="button" className="b-line-orb" onClick={() => x.product && (setCartOpen(false), openProduct(x.product))} tabIndex={-1}>
+                        {x.product && <Shot p={x.product} />}
+                      </button>
+                      <div className="b-line-copy">
+                        <span className="b-house">{x.product?.brand || t('Unavailable fragrance')}</span>
+                        <strong>{x.product ? displayName(x.product.name) : ''}</strong>
+                        <small>{bottle(v?.label || t('Please remove this item'))}</small>
+                        <span className="b-line-price">{v ? money(v.price * x.quantity) : ''}</span>
+                      </div>
+                      <div className="b-stepper">
+                        <button type="button" onClick={() => changeQty(x.id, x.variant, 1)} aria-label={t('Increase') + ': ' + x.product?.name} disabled={x.quantity >= 10}>
+                          <Plus size={15} />
+                        </button>
+                        <span>{x.quantity}</span>
+                        <button type="button" onClick={() => changeQty(x.id, x.variant, -1)} aria-label={(x.quantity === 1 ? t('Remove') : t('Decrease')) + ': ' + x.product?.name}>
+                          {x.quantity === 1 ? <Trash2 size={14} /> : <Minus size={15} />}
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="b-summary">
+                <div>
+                  <span>{t('Product subtotal')}</span>
+                  <strong>{money(cartTotal)}</strong>
+                </div>
+                <p>
+                  <Truck size={16} />
+                  {t(settings.freeTashkentDelivery ? 'Free and quick delivery in Tashkent' : 'Delivery arranged with the store')}
+                </p>
+              </div>
+              {invalidCart && <p className="b-error">{t('An item is unavailable. Remove it before continuing.')}</p>}
+
+              {review ? (
+                <div className="b-review">
+                  <span className="b-eyebrow">{t('One final check')}</span>
+                  <h3>{t('Review your order')}</h3>
+                  <dl>
+                    <dt>{t('Your name')}</dt>
+                    <dd>{customer.name}</dd>
+                    <dt>{t('Phone number')}</dt>
+                    <dd>{customer.phone}</dd>
+                    <dt>{t('Delivery address')}</dt>
+                    <dd>{customer.address}</dd>
+                    {(gift || customer.note.trim()) && (
+                      <>
+                        <dt>{t('Note')}</dt>
+                        <dd>{withGift(customer).note}</dd>
+                      </>
+                    )}
+                  </dl>
+                  <button type="button" className="b-text-btn" onClick={() => setReview(false)}>
+                    <Pencil size={14} />
+                    {t('Edit contact details')}
+                  </button>
+                  {(!checkoutReady || !inTelegram) && !demo && (
+                    <details className="b-draft">
+                      <summary>{t('View Telegram draft')}</summary>
+                      <pre>{makeOrderDraft(withGift(customer))}</pre>
+                      <button
+                        type="button"
+                        className="b-text-btn"
+                        onClick={async () => {
+                          try { await navigator.clipboard.writeText(makeOrderDraft(withGift(customer))); setToast('Order details copied'); } catch {}
+                        }}
+                      >
+                        <Copy size={14} />
+                        {t('Copy order details')}
+                      </button>
+                    </details>
+                  )}
+                </div>
+              ) : (
+                <div className="b-form">
+                  <h3>{t('Your contact details')}</h3>
+                  {(['name', 'phone', 'address'] as const).map((field) => (
+                    <label key={field} className={'b-field ' + (fieldErrors[field] ? 'err' : '')}>
+                      <span>{t({ name: 'Your name', phone: 'Phone number', address: 'Delivery address' }[field])}</span>
+                      <input
+                        id={'checkout-' + field}
+                        value={customer[field]}
+                        inputMode={field === 'phone' ? 'tel' : undefined}
+                        type={field === 'phone' ? 'tel' : 'text'}
+                        autoComplete={{ name: 'name', phone: 'tel', address: 'street-address' }[field]}
+                        placeholder={field === 'name' ? t('Full name') : field === 'address' ? t('City, street, building') : '+998 90 123 45 67'}
+                        onChange={(e) => changeCustomer(field, field === 'phone' ? phoneEntry(e.target.value) : e.target.value)}
+                        aria-invalid={Boolean(fieldErrors[field])}
+                      />
+                      {fieldErrors[field] && <small>{t(fieldErrors[field])}</small>}
+                    </label>
+                  ))}
+                  <label className="b-field">
+                    <span>
+                      {t('Note')} <em>{t('(optional)')}</em>
+                    </span>
+                    <textarea rows={2} value={customer.note} placeholder={t('Your note to the store')} onChange={(e) => changeCustomer('note', e.target.value)} maxLength={400} />
+                  </label>
+                  <button type="button" className={'b-gift ' + (gift ? 'on' : '')} onClick={() => { haptic('select'); setGift((g) => !g); setReview(false); }} aria-pressed={gift}>
+                    <Gift size={20} />
+                    <span>
+                      <strong>{t('This is a gift')}</strong>
+                      <small>{t('We will note it in your request')}</small>
+                    </span>
+                    <i>{gift && <Check size={14} />}</i>
+                  </button>
+                </div>
+              )}
+
+              {orderError && <p className="b-error">{t(orderError)}</p>}
+              {draftOpened && <p className="b-fine center">{t('Your order draft opens in the store’s chat. Review it and tap Send in Telegram.')}</p>}
+              <p className="b-fine center">{t('This is an order request. Availability, final price, delivery, and payment are arranged with the store.')}</p>
+
+              <div className="b-buybar in-form">
+                <button type="submit" className="b-buy" disabled={busy || invalidCart}>
+                  {busy ? <Loader2 size={19} className="b-spin" /> : review ? <Send size={18} /> : null}
+                  {!review && (
+                    <>
+                      <span>{money(cartTotal)}</span>
+                      <span className="b-buy-sep" />
+                    </>
+                  )}
+                  <span>
+                    {busy
+                      ? t('Sending…')
+                      : !review
+                        ? t('Continue')
+                        : demo || (checkoutReady && inTelegram)
+                          ? t('Send order request')
+                          : t('Request order in Telegram')}
+                  </span>
+                </button>
+              </div>
+            </form>
+          )}
+        </Sheet>
+      )}
+
+      {/* ---------- filters ---------- */}
+      {filters && (
+        <FilterSheet
+          close={() => setFilters(false)}
+          houses={houses}
+          familyCounts={familyCounts}
+          state={{ gender, brand, budget, concentration, color, sort }}
+          set={{ setGender, setBrand, setBudget, setConcentration, setColor, setSort }}
+          reset={resetFilters}
+          resultCount={filtered.length}
+          done={() => { setFilters(false); scrollToGrid(); }}
+        />
+      )}
+
+      {/* ---------- finder ---------- */}
+      {finder && (
+        <Sheet label={t('Find your fragrance')} close={() => setFinder(false)} className="b-finder">
+          <FragranceFinder
+            products={products}
+            close={() => setFinder(false)}
+            apply={(choice: FinderChoice) => {
+              setFinder(false);
+              setTab('home');
+              setQuery('');
+              setBrand('all');
+              setColor('all');
+              setGender(choice.gender);
+              setBudget(choice.budget === '1000000' ? 'u1' : choice.budget === '2500000' ? 'u25' : 'all');
+              setConcentration(choice.concentration);
+              scrollToGrid();
+            }}
+          />
+        </Sheet>
+      )}
+
+      {/* ---------- about ---------- */}
+      {help && (
+        <Sheet label={t('About Fragrance UZ')} close={() => setHelp(false)} className="b-about">
+          <div className="b-about-hero">
+            <button className="b-round glass" onClick={() => setHelp(false)} aria-label={t('Close contact')}>
+              <X size={20} />
+            </button>
+            <img src="/brand/fragranceuz-gold.svg" alt="FRAGRANCE UZ" width="200" height="158" />
+            <p>{t('Since 2018')}</p>
+          </div>
+          <div className="b-about-body">
+            <h2>{t('A personal connection to fragrance.')}</h2>
+            <p>{t('Original fragrances, chosen with care. Explore our collection or discover your next scent with a decant.')}</p>
+            <div className="b-delivery">
+              <Truck size={22} />
+              <div>
+                <strong>{t(settings.freeTashkentDelivery ? 'Free and quick delivery in Tashkent' : 'Delivery arranged with the store')}</strong>
+                <small>{t('Pay on receipt in Tashkent. We will agree a convenient delivery time with you.')}</small>
+              </div>
+            </div>
+            <div className="b-links">
+              {[
+                { icon: <MessageCircle size={19} />, label: t('Talk to the store'), sub: socialHandle(settings.managerUrl), go: () => goExternal(settings.managerUrl) },
+                { icon: <Send size={19} />, label: t('Our Telegram channel'), sub: socialHandle(settings.channelUrl), go: () => goExternal(settings.channelUrl) },
+                { icon: <Droplets size={19} />, label: t('Decants · Parf Bar'), sub: socialHandle(settings.decantsUrl), go: () => goExternal(settings.decantsUrl) },
+                { icon: <Star size={19} />, label: t('Customer reviews'), sub: socialHandle(settings.reviewsUrl), go: () => goExternal(settings.reviewsUrl) },
+                { icon: <Sparkles size={19} />, label: 'Instagram', sub: socialHandle(settings.instagramUrl), go: () => goExternal(settings.instagramUrl) },
+              ].map((l) => (
+                <button key={l.label} onClick={l.go}>
+                  <span className="b-link-icon">{l.icon}</span>
+                  <span>
+                    <strong>{l.label}</strong>
+                    <small>{l.sub}</small>
+                  </span>
+                  <ArrowUpRight size={17} />
+                </button>
+              ))}
+              <a href={'tel:' + settings.phone}>
+                <span className="b-link-icon">
+                  <Phone size={19} />
+                </span>
+                <span>
+                  <strong>{t('Phone')}</strong>
+                  <small>{settings.phone}</small>
+                </span>
+                <ArrowUpRight size={17} />
+              </a>
+            </div>
+            <div className="b-prefs">
+              <LanguageSwitch lang={lang} setLang={setLang} />
+              <button className="b-text-btn" onClick={toggleTheme}>
+                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                {t(theme === 'dark' ? 'Use light mode' : 'Use dark mode')}
+              </button>
+            </div>
+            <p className="b-fine">{t('Product information and prices come from the channel’s posts. The store confirms current availability, final price, delivery, and payment before an order is finalized.')}</p>
+          </div>
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
+type FilterState = { gender: string; brand: string; budget: Budget; concentration: string; color: string; sort: string };
+type FilterSetters = {
+  setGender: (v: string) => void; setBrand: (v: string) => void; setBudget: (v: Budget) => void;
+  setConcentration: (v: string) => void; setColor: (v: string) => void; setSort: (v: string) => void;
+};
+
+function FilterSheet({ close, houses, familyCounts, state, set, reset, resultCount, done }: {
+  close: () => void; houses: [string, number][]; familyCounts: Record<string, number>; state: FilterState; set: FilterSetters;
+  reset: () => void; resultCount: number; done: () => void;
+}) {
+  const { t } = useLanguage();
+  const [houseQuery, setHouseQuery] = useState('');
+  const pick = (fn: () => void) => () => { haptic('select'); fn(); };
+  const shownHouses = houses.filter(([name]) => name.toLowerCase().includes(houseQuery.trim().toLowerCase()));
+  return (
+    <Sheet label={t('Filters')} close={close} className="b-filters">
+      <div className="b-sheet-head">
+        <h2>{t('Filters')}</h2>
+        <button className="b-round dark" onClick={close} aria-label={t('Close')}>
+          <X size={20} />
+        </button>
+      </div>
+      <div className="b-filter-body">
+        <h3 className="b-label">{t('Sort fragrances')}</h3>
+        <div className="b-pills">
+          {[['latest', 'Latest in channel'], ['price-asc', 'Price: low to high'], ['price-desc', 'Price: high to low'], ['name', 'Name: A–Z']].map(([id, label]) => (
+            <button key={id} className={state.sort === id ? 'on' : ''} onClick={pick(() => set.setSort(id))}>{t(label)}</button>
+          ))}
+        </div>
+        <h3 className="b-label">{t('Audience')}</h3>
+        <div className="b-pills">
+          {[['all', 'All'], ['women', 'Women'], ['men', 'Men'], ['unisex', 'Unisex']].map(([id, label]) => (
+            <button key={id} className={state.gender === id ? 'on' : ''} onClick={pick(() => set.setGender(id))}>{t(label)}</button>
+          ))}
+        </div>
+        <h3 className="b-label">{t('Budget')}</h3>
+        <div className="b-pills">
+          {([['all', 'Any price'], ['u1', 'Up to 1 million'], ['u25', 'Up to 2.5 million'], ['lux', 'Exclusive · from 2.5 million']] as [Budget, string][]).map(([id, label]) => (
+            <button key={id} className={state.budget === id ? 'on' : ''} onClick={pick(() => set.setBudget(id))}>{t(label)}</button>
+          ))}
+        </div>
+        <h3 className="b-label">{t('Bottle colour')}</h3>
+        <div className="b-color-grid">
+          {FAMILIES.filter((f) => familyCounts[f.id]).map((f) => (
+            <button key={f.id} className={state.color === f.id ? 'on' : ''} onClick={pick(() => set.setColor(state.color === f.id ? 'all' : f.id))} aria-pressed={state.color === f.id}>
+              <i style={{ background: f.swatch }} />
+              {t(f.label)}
+            </button>
+          ))}
+        </div>
+        <h3 className="b-label">{t('Concentration')}</h3>
+        <div className="b-pills">
+          {[['all', 'Any concentration'], ['edt', 'EDT'], ['edp', 'EDP'], ['parfum', 'Parfum'], ['extrait', 'Extrait']].map(([id, label]) => (
+            <button key={id} className={state.concentration === id ? 'on' : ''} onClick={pick(() => set.setConcentration(id))}>
+              {id === 'all' ? t(label) : label}
+            </button>
+          ))}
+        </div>
+        <h3 className="b-label">{t('Fragrance house')}</h3>
+        <label className="b-search small">
+          <Search size={17} />
+          <input value={houseQuery} onChange={(e) => setHouseQuery(e.target.value)} placeholder={t('Find a house…')} aria-label={t('Find a house…')} />
+        </label>
+        <div className="b-house-list">
+          <button className={state.brand === 'all' ? 'on' : ''} onClick={pick(() => set.setBrand('all'))}>
+            {t('All houses')}
+          </button>
+          {shownHouses.map(([name, count]) => (
+            <button key={name} className={state.brand === name ? 'on' : ''} onClick={pick(() => set.setBrand(state.brand === name ? 'all' : name))}>
+              {name}
+              <small>{count}</small>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="b-buybar">
+        <button className="b-buy ghost" onClick={pick(reset)}>
+          {t('Reset filters')}
+        </button>
+        <button className="b-buy" onClick={done}>
+          {t('Show')} · {resultCount}
+        </button>
+      </div>
+    </Sheet>
+  );
+}
