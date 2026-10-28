@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createHmac} from 'node:crypto';
+import {verifyTelegram} from '../lib/telegram.ts';
+import {orderInput,productInput} from '../.sites-runtime/tests/validation.mjs';
+import fs from 'node:fs';
+const bot='000000:test-token-only';
+function signed(fields){const p=new URLSearchParams(fields);const check=[...p].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([k,v])=>`${k}=${v}`).join('\n');const secret=createHmac('sha256','WebAppData').update(bot).digest();p.set('hash',createHmac('sha256',secret).update(check).digest('hex'));return p.toString()}
+const now=Date.now(), fields={auth_date:String(Math.floor(now/1000)),user:JSON.stringify({id:123456789,first_name:'Test'})};
+test('Telegram signature accepts valid data',async()=>assert.equal((await verifyTelegram(signed(fields),bot,now)).id,123456789));
+test('Telegram rejects tampered, unsigned, expired, future, or duplicate data',async()=>{for(const data of [signed(fields).replace('Test','Evil'),new URLSearchParams(fields).toString(),signed({...fields,auth_date:String(Math.floor(now/1000)-3601)}),signed({...fields,auth_date:String(Math.floor(now/1000)+120)}),signed(fields)+'&auth_date=1'])assert.equal(await verifyTelegram(data,bot,now),null)});
+test('Missing bot credentials fail closed',async()=>assert.equal(await verifyTelegram(signed(fields),'',now),null));
+test('Orders reject negative quantity, arbitrary prices, invalid IDs and oversized carts',()=>{const good={requestKey:crypto.randomUUID(),quotedTotal:3120000,customer:{name:'Test User',phone:'+998900000000',address:'Test address',note:''},items:[{id:'11078',variant:0,quantity:1}]};assert.equal(orderInput.parse(good).items.length,1);for(const quantity of [-1,0,11,1.2])assert.equal(orderInput.safeParse({...good,items:[{...good.items[0],quantity}]}).success,false);assert.equal(orderInput.safeParse({...good,items:Array(16).fill(good.items[0])}).success,false);assert.equal('price' in orderInput.parse({...good,items:[{...good.items[0],price:1}]}).items[0],false)});
+test('Imported products have valid sources, matching IDs, real images and positive prices',()=>{const data=JSON.parse(fs.readFileSync(new URL('../data/products.json',import.meta.url)));assert.equal(data.length,539);for(const p of data){assert.ok(productInput.safeParse(p).success,p.id);assert.equal(p.sourceUrl.split('/').pop(),p.id);if(p.image)assert.ok(fs.existsSync(new URL('../public'+p.image,import.meta.url)));assert.ok(p.variants.every(v=>v.price>0))}assert.ok(data.some(p=>p.id==='11077'&&/Остаток/.test(p.variants[0].label)));assert.equal(data.find(p=>p.id==='11075').fragranticaUrl,null)});
+test('Admin inputs reject unsafe links and zero pricing',()=>{const p=JSON.parse(fs.readFileSync(new URL('../data/products.json',import.meta.url)))[0];for(const fragranticaUrl of ['javascript:alert(1)','https://evil.com/perfume/X/Y.html','https://www.fragrantica.ru.evil.com/perfume/X/Y.html'])assert.equal(productInput.safeParse({...p,fragranticaUrl}).success,false);assert.equal(productInput.safeParse({...p,variants:[{...p.variants[0],price:0}]}).success,false)});

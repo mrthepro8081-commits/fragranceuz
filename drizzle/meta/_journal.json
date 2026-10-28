@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1793129127271,
+      "tag": "0000_curved_maginty",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793144956692,
+      "tag": "0001_jittery_ricochet",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793146836033,
+      "tag": "0002_smooth_silver_sable",
+      "breakpoints": true
+    }
+  ]
+}

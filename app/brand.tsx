@@ -1,0 +1,3 @@
+import {translate,type Language} from '../lib/i18n';
+export function Brand({compact=false}:{compact?:boolean}){return <span className={'brand-lockup '+(compact?'compact':'')}><img src="/brand/fragranceuz-gold.svg" alt="FRAGRANCE UZ" width="120" height="95"/></span>}
+export function LogoLoader({lang='ru',fullscreen=false}:{lang?:Language;fullscreen?:boolean}){return <div className={fullscreen?'brand-loading-screen':'logo-loading-inline'} role="status" aria-live="polite" aria-label={translate('Loading collection',lang)}><img className="loading-logo" src="/brand/fragranceuz-gold.svg" alt="FRAGRANCE UZ" width="220" height="174"/></div>}

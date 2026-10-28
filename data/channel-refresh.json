@@ -1,0 +1,17 @@
+{
+  "channel": "https://t.me/fragranceuz",
+  "refreshedAt": "2026-10-28T00:23:55.491Z",
+  "period": {
+    "since": "2026-04-27T19:00:00.000Z",
+    "through": "2026-10-28",
+    "timezone": "Asia/Tashkent"
+  },
+  "coverage": {
+    "pages": 29,
+    "newestPostId": 11078,
+    "oldestScannedPostId": 10313,
+    "oldestScannedDate": "2026-04-20T02:23:15+00:00",
+    "cutoffReached": true
+  },
+  "products": 539
+}

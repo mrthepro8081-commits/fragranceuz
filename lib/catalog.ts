@@ -1,0 +1,8 @@
+import type {Product,CartItem} from './types';
+export function startingVariant(product:Product){return product.variants.reduce((best,v,i)=>v.price<product.variants[best].price?i:best,0)}
+export function startingPrice(product:Product){return product.variants[startingVariant(product)].price}
+export function withinBudget(product:Product,ceiling:string){return !ceiling||startingPrice(product)<=Number(ceiling)}
+export function concentrationGroup(value:string|null){const s=(value||'').toLowerCase();return /extrait|extract/.test(s)?'extrait':/eau de toilette|edt/.test(s)?'edt':/eau de parfum|edp/.test(s)?'edp':/parfum/.test(s)?'parfum':'other'}
+export function relatedProducts(product:Product,products:Product[]){const price=startingPrice(product);return products.filter(p=>p.active&&p.id!==product.id&&(p.brand===product.brand||Math.abs(startingPrice(p)-price)<=price*.25)).sort((a,b)=>Number(b.brand===product.brand)-Number(a.brand===product.brand)||Math.abs(startingPrice(a)-price)-Math.abs(startingPrice(b)-price)).slice(0,4)}
+export function cleanCart(value:unknown):CartItem[]{if(!Array.isArray(value))return [];const seen=new Set<string>();return value.filter((x):x is CartItem=>{if(!x||(x.expectedLabel!==undefined&&typeof x.expectedLabel!=='string')||typeof x.id!=='string'||!/^\d{1,16}$/.test(x.id)||!Number.isInteger(x.variant)||x.variant<0||x.variant>9||!Number.isInteger(x.quantity)||x.quantity<1||x.quantity>10)return false;const key=x.id+':'+x.variant;if(seen.has(key))return false;seen.add(key);return true}).slice(0,15)}
+export function cleanSaved(value:unknown):string[]{return Array.isArray(value)?[...new Set(value.filter((x):x is string=>typeof x==='string'&&/^\d{1,16}$/.test(x)))].slice(0,500):[]}
