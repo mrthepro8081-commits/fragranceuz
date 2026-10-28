@@ -1,5 +1,7 @@
 import {catalog,isAdmin,adminRole,runtime,error,sameOrigin,body,storeSettings,ADMIN_BODY_LIMIT} from '../../../lib/server';
 import {saveProduct,deleteProduct} from '../../../lib/product-store';
+import {setOrderStatus} from '../../../lib/order-status';
+import {sendOrderAlert} from '../../../lib/order-notify';
 import {settingsInput} from '../../../lib/settings';
 import {productInput} from '../../../lib/validation';
 import {sendNotification} from '../../../lib/telegram';
@@ -27,14 +29,14 @@ export async function POST(request:Request){
    if(!await deleteProduct(e.DB,'live',input.id))return error('Product not found',404);return Response.json({ok:true});
   }
   if(input.action==='order-status'){
-   if(!['new','confirmed','completed','cancelled'].includes(input.status)||typeof input.id!=='string')return error('Invalid status');
-   await e.DB.prepare('UPDATE orders SET status=? WHERE id=?').bind(input.status,input.id).run();return Response.json({ok:true});
+   const result=await setOrderStatus(e,input.id,input.status,new URL(request.url).origin);
+   if(!result.ok)return error(result.error,result.code);return Response.json({ok:true,notified:result.changed?result.notified:null});
   }
   if(input.action==='retry-notification'){
    if(!e.TELEGRAM_BOT_TOKEN||!e.TELEGRAM_ORDER_CHAT_ID)return error('Telegram is not connected',503);
    const claimed=await e.DB.prepare("UPDATE orders SET notification='sending' WHERE id=? AND notification='failed' RETURNING id,data").bind(input.id).first<{id:string;data:string}>();
    if(!claimed)return error('Only failed notifications can be retried',409);
-   try{await sendNotification(e.TELEGRAM_BOT_TOKEN,e.TELEGRAM_ORDER_CHAT_ID,formatOrder(claimed.id,JSON.parse(claimed.data)));await e.DB.prepare("UPDATE orders SET notification='sent' WHERE id=?").bind(claimed.id).run();}catch{await e.DB.prepare("UPDATE orders SET notification='failed' WHERE id=?").bind(claimed.id).run();return error('Telegram delivery failed; the order is saved.',502);}return Response.json({ok:true});
+   try{await sendOrderAlert(e,claimed.id,JSON.parse(claimed.data),new URL(request.url).origin);await e.DB.prepare("UPDATE orders SET notification='sent' WHERE id=?").bind(claimed.id).run();}catch{await e.DB.prepare("UPDATE orders SET notification='failed' WHERE id=?").bind(claimed.id).run();return error('Telegram delivery failed; the order is saved.',502);}return Response.json({ok:true});
   }
   return error('Unknown action');
  }catch(err){if(err&&typeof err==='object'&&'issues' in err)return error('Product details are invalid. Check the source, Fragrantica link, price, and volume.');return error('Could not save. Please try again.',500);}

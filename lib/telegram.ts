@@ -14,7 +14,16 @@ export async function verifyTelegram(raw:string,token:string,now=Date.now()):Pro
   const u=JSON.parse(p.get('user')||'null');return u&&Number.isSafeInteger(u.id)&&u.id>0&&typeof u.first_name==='string'?u:null;
  }catch{return null;}
 }
-export async function sendNotification(token:string,chatId:string,text:string){
- const response=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text,link_preview_options:{is_disabled:true}}),signal:AbortSignal.timeout(12000)});
- const data=await response.json() as {ok?:boolean};if(!response.ok||!data.ok)throw new Error('Telegram delivery failed');
+/** Calls the Bot API and throws unless Telegram answers ok. */
+export async function tgCall(token:string,method:string,payload:Record<string,unknown>){
+ const response=await fetch(`https://api.telegram.org/bot${token}/${method}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)});
+ const data=await response.json() as {ok?:boolean;result?:unknown};if(!response.ok||!data.ok)throw new Error('Telegram delivery failed');return data.result;
+}
+export async function sendNotification(token:string,chatId:string,text:string,extra:Record<string,unknown>={}){
+ await tgCall(token,'sendMessage',{chat_id:chatId,text,link_preview_options:{is_disabled:true},...extra});
+}
+/** Secret Telegram must send with webhook updates; derived from the bot token so no extra setting is needed. */
+export async function webhookSecret(token:string){
+ const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode('fragranceuz-webhook:'+token)));
+ return [...digest].map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,48);
 }

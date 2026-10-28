@@ -397,8 +397,14 @@ export default function Storefront() {
     haptic('light');
     setSaved((x) => (x.includes(id) ? x.filter((i) => i !== id) : [...x, id]));
   }
+  /** Anonymous counters for the admin statistics; the demo storefront does not count. */
+  function track(type: 'view' | 'add', id: string) {
+    if (new URLSearchParams(location.search).get('demo') === '1') return;
+    fetch('/api/events', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, id }) }).catch(() => {});
+  }
   function openProduct(p: Product) {
     haptic('light');
+    track('view', p.id);
     setSelected(p);
     setVariant(cheapest(p));
     setJustAdded(false);
@@ -419,6 +425,7 @@ export default function Storefront() {
         : [...c, { id: p.id, variant: v, quantity: 1, expectedLabel: p.variants[v].label }];
     });
     setOrderResult(null);
+    track('add', p.id);
     flyToBag(from, target, p.image, tintOf(p).niche);
     haptic('success');
     setToast('Added to your bag');
@@ -609,17 +616,19 @@ export default function Storefront() {
             <img src="/brand/fragranceuz-gold.svg" alt="FRAGRANCE UZ" width="92" height="73" />
           </button>
           <div className="b-top-actions">
-            {viewerRole && (
-              <a href={demo ? '/demo' : '/admin'} className="b-round" aria-label={t('Store management')} title={t('Store management')}>
-                <Settings2 size={18} />
-              </a>
-            )}
             <button className="b-round" onClick={toggleTheme} aria-label={t(theme === 'dark' ? 'Use light mode' : 'Use dark mode')}>
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <LanguageSwitch lang={lang} setLang={setLang} />
           </div>
         </div>
+        {viewerRole && (
+          <a href={demo ? '/demo' : '/admin'} className="b-manage">
+            <Settings2 size={17} />
+            <span>{t('Store management')}</span>
+            <ArrowRight size={16} />
+          </a>
+        )}
         {tab === 'saved' ? (
           <h1 className="b-hero-title">
             <em>{t('Saved')}</em>

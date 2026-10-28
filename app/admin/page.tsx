@@ -12,7 +12,8 @@ import { tints, toneOf } from '../boutique/tone';
 import { cheapest, displayName } from '../boutique/format';
 import { ConfirmSheet, type AdminChange } from './confirm';
 import { LinkImport, ProductEditor, blankProduct } from './editor';
-import { CustomersPanel, OrdersPanel, SettingsPanel, StatsPanel, type Order } from './panels';
+import { CustomersPanel, OrdersPanel, SettingsPanel, type Order } from './panels';
+import { StatsPanel } from './stats';
 
 type Role = 'owner' | 'admin' | 'demo';
 type Editing = { product: Product; before: Product | null; warnings: string[] };
@@ -70,6 +71,8 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
       setCustomers(d.customers);
       setSettings(d.settings);
       if (openTarget) {
+        const wanted = new URLSearchParams(location.search).get('tab');
+        if (wanted === 'orders' || wanted === 'stats' || wanted === 'customers' || wanted === 'settings') setTab(wanted);
         const target = d.products.find((p) => p.id === new URLSearchParams(location.search).get('product'));
         if (target) setEditing({ product: target, before: target, warnings: [] });
       }
@@ -341,7 +344,7 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
               retry={(o) => ask({ action: 'retry-notification', id: o.id })}
             />
           )}
-          {tab === 'stats' && <StatsPanel statistics={statistics} productCount={counts.visible} hiddenCount={counts.hidden} />}
+          {tab === 'stats' && <StatsPanel demo={demo} headers={headers} products={products} ordersTotal={statistics?.totalOrders ?? 0} />}
           {tab === 'customers' && <CustomersPanel customers={customers} demo={demo} download={downloadCustomers} exporting={exporting} />}
           {tab === 'settings' && (
             <SettingsPanel settings={settings} busy={busy} onDirtyChange={setSettingsDirty} save={(next) => ask({ action: 'settings', settings: next, before: settings })} />

@@ -9,6 +9,7 @@ import Storefront from '../app/storefront';
 import Admin from '../app/admin/page';
 import { defaultSettings, type StoreSettings } from '../lib/settings';
 import type { Product } from '../lib/types';
+import { sampleAnalytics } from '../lib/analytics';
 
 type Local = { overrides: Record<string, Product>; removed: string[]; settings: StoreSettings | null };
 const KEY = 'fragranceuz-preview-admin';
@@ -43,6 +44,10 @@ window.fetch = async (input, init) => {
   if (!/\/api\//.test(path)) return realFetch(input, init);
   const local = load();
   const settings = local.settings || defaultSettings;
+  if (/\/api\/demo\/analytics$/.test(path)) {
+    return json(sampleAnalytics(await catalog(false), Number(url.searchParams.get('days')) || 30));
+  }
+  if (/\/api\/events$/.test(path)) return new Response(null, { status: 204 });
   if (/\/api\/demo\/import$/.test(path)) {
     const { url: link } = JSON.parse(String(init?.body || '{}'));
     const id = /^https:\/\/t\.me\/(?:s\/)?fragranceuz\/(\d+)\/?(?:\?.*)?$/.exec(String(link).trim())?.[1];

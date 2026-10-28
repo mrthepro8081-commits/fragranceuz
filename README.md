@@ -28,6 +28,29 @@ Migration `drizzle/0003_product_images_and_removals.sql` adds the photo and dele
 
 `preview/` builds a standalone page (shop + admin, demo data kept in the browser) for sharing without a server: `npx vite build --config preview/vite.config.mjs && python3 preview/catalog.py && node preview/inline.mjs`.
 
+## Launch on Cloudflare
+
+Needs Node 22.13+ and a Cloudflare account (the free plan is enough).
+
+```sh
+npm install
+npx wrangler login            # once, opens the browser
+npm run deploy                # asks for the bot token from @BotFather
+```
+
+`scripts/deploy.mjs` builds the app, creates the `fragranceuz-db` D1 database on the first run, applies every migration in `drizzle/`, deploys the Worker `fragranceuz`, stores the bot token as an encrypted Worker secret and connects the bot: webhook (`/api/telegram`), the "Магазин" menu button and `/start`. Owner `740597322` gets the admin and the order alerts; change with `OWNER_TELEGRAM_ID`, add admins with `ADMIN_TELEGRAM_IDS=111,222`, send alerts elsewhere with `ORDER_CHAT_ID`. Run `npm run deploy` again after any change.
+
+After the first deploy, press **Start** in the bot from the owner account — Telegram lets a bot message you only after that.
+
+## Orders in Telegram
+
+- A new request arrives in the owner chat with the customer's name, phone, Telegram, address, items and total, and buttons **✅ Подтвердить / ❌ Отменить** plus **💬 Написать клиенту**.
+- Approving (in the chat or in the admin) sends the owner a "Заказ подтверждён" card with the contacts for delivery and messages the customer in their language. Completing or cancelling also tells the customer.
+
+## Statistics
+
+The Statistics tab (7 / 30 / 90 days): requested value with change vs the previous period, requests, average order, completed value, new customers, requests per day (chart or table), status split, view → bag → order funnel, best-selling fragrances, top houses and most-viewed products. Views and bag additions are anonymous daily counters (`product_events`, migration 0004).
+
 ## Current catalog
 
 The public channel was refreshed for **28 April–28 October 2026**, Asia/Tashkent. The audit covers 574 messages across 29 pages, crossing the cutoff on a page dated 20 April. There are **539 catalog offers** from 543 priced posts after removing 4 exact older repeats. Distinct sizes, concentrations, testers, partial bottles and sets remain separate offers. 537 real source photos are stored locally; 2 posts have no image. 22 entries have no single matching scent link and 10 have no explicit release year; those fields remain empty. No substitute Fragrantica URLs, release years, stock counts or scent notes are invented.

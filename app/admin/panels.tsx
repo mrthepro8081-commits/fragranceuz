@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Download, Loader2, MessageCircle, Phone, RefreshCw, Search } from 'lucide-react';
-import type { CustomerRecord, OrderData, StoreStats } from '../../lib/types';
+import type { CustomerRecord, OrderData } from '../../lib/types';
 import { settingsInput, type StoreSettings } from '../../lib/settings';
 import { formatBottle, formatDate, formatMoney } from '../../lib/i18n';
 import { useLanguage } from '../language';
@@ -107,45 +107,6 @@ export function OrdersPanel({ orders, total, busy, changeStatus, retry }: {
           ))}
         </div>
       )}
-    </section>
-  );
-}
-
-export function StatsPanel({ statistics, productCount, hiddenCount }: { statistics: StoreStats | null; productCount: number; hiddenCount: number }) {
-  const { t, lang } = useLanguage();
-  if (!statistics) return null;
-  const tiles: [string, string | number, string?][] = [
-    ['New requests', statistics.newOrders, 'accent'],
-    ['All submitted requests', statistics.totalOrders],
-    ['Customers', statistics.customers],
-    ['Completed orders', statistics.completedOrders],
-    ['Requested product value', formatMoney(statistics.requestValue, lang), 'wide'],
-    ['Completed order value', formatMoney(statistics.completedValue, lang), 'wide'],
-    ['Products', productCount],
-    ['Hidden', hiddenCount],
-  ];
-  const max = Math.max(1, ...STATUSES.map((s) => statistics[`${s}Orders`]));
-  return (
-    <section className="ba-panel">
-      <div className="ba-tiles">
-        {tiles.map(([label, value, kind]) => (
-          <article key={label} className={'ba-tile ' + (kind || '')}>
-            <span>{t(label)}</span>
-            <strong>{value}</strong>
-          </article>
-        ))}
-      </div>
-      <h3 className="b-label">{t('Order status overview')}</h3>
-      <div className="ba-bars">
-        {STATUSES.map((s) => (
-          <div key={s} className={'status-' + s}>
-            <span>{t('status.' + s)}</span>
-            <i style={{ width: (statistics[`${s}Orders`] / max) * 100 + '%' }} />
-            <strong>{statistics[`${s}Orders`]}</strong>
-          </div>
-        ))}
-      </div>
-      <p className="b-fine">{t('Requests are not confirmed payments. Completed order value follows the status set by the store.')}</p>
     </section>
   );
 }

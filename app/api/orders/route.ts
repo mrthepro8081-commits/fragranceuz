@@ -1,5 +1,6 @@
 import {catalog,runtime,error,sameOrigin,body} from '../../../lib/server';
-import {verifyTelegram,sendNotification} from '../../../lib/telegram';
+import {verifyTelegram} from '../../../lib/telegram';
+import {sendOrderAlert} from '../../../lib/order-notify';
 import {orderInput} from '../../../lib/validation';
 import {translate,formatProductName,formatMoney,formatBottle} from '../../../lib/i18n';
 import type {OrderData} from '../../../lib/types';
@@ -18,7 +19,7 @@ export async function POST(request:Request){
  const result=await e.DB.prepare('INSERT OR IGNORE INTO orders (id,user_id,request_key,data,total,status,notification,created_at) VALUES (?,?,?,?,?,?,?,?)').bind(id,String(user.id),input.requestKey,JSON.stringify(data),total,'new','pending',new Date().toISOString()).run();
  if(!result.meta.changes){const duplicate=await e.DB.prepare('SELECT id,notification FROM orders WHERE user_id=? AND request_key=?').bind(String(user.id),input.requestKey).first();return Response.json({orderId:duplicate?.id,notification:duplicate?.notification});}
  let notification='sent';
- try{await sendNotification(e.TELEGRAM_BOT_TOKEN,e.TELEGRAM_ORDER_CHAT_ID,formatOrder(id,data));}catch{notification='failed';}
+ try{await sendOrderAlert(e,id,data,new URL(request.url).origin);}catch{notification='failed';}
  await e.DB.prepare('UPDATE orders SET notification=? WHERE id=?').bind(notification,id).run();
  return Response.json({orderId:id,notification},{status:201});
 }

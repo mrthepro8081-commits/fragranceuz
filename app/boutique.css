@@ -95,6 +95,8 @@ html.b-locked, html.b-locked body { overflow: hidden; }
 .b-hero-art { position: absolute; right: -46px; top: 36px; width: 190px; height: auto; color: #e8cf91; opacity: .09; transform: rotate(8deg); pointer-events: none; }
 .b-topbar { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .b-logo img { width: 86px; height: auto; }
+.b-manage { position: relative; display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: #e8cf91; color: #2a1215; font-size: 14.5px; font-weight: 800; box-shadow: 0 8px 20px rgba(0, 0, 0, .18); }
+.b-manage span { flex: 1; }
 .b-top-actions { display: flex; align-items: center; gap: 8px; }
 .b-hero-title { position: relative; margin: 14px 0 8px !important; font-size: clamp(38px, 10.5vw, 54px); line-height: .95; font-weight: 500 !important; color: #fbf1e2; }
 .b-hero-title em { font-style: italic; color: #e8cf91; }

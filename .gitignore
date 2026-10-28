@@ -46,3 +46,4 @@ yarn-error.log*
 
 /work-bin/
 /dist-preview/
+/dist/server/wrangler.deploy.json

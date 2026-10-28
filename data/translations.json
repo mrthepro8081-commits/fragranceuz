@@ -1974,5 +1974,125 @@
   "Confirm": [
     "Подтвердить",
     "Tasdiqlash"
+  ],
+  "new": [
+    "новое",
+    "yangi"
+  ],
+  "Requested value by day": [
+    "Сумма заявок по дням",
+    "Kunlar bo‘yicha so‘rovlar summasi"
+  ],
+  "Requests": [
+    "Заявки",
+    "So‘rovlar"
+  ],
+  "No requests in this period yet.": [
+    "За этот период заявок пока нет.",
+    "Bu davrda hozircha so‘rovlar yo‘q."
+  ],
+  "Product views": [
+    "Просмотры товаров",
+    "Mahsulot ko‘rishlar"
+  ],
+  "Added to bag": [
+    "Добавлено в корзину",
+    "Savatga qo‘shilgan"
+  ],
+  "Bottles ordered": [
+    "Заказано флаконов",
+    "Buyurtma qilingan flakonlar"
+  ],
+  "Could not load statistics. Please try again.": [
+    "Не удалось загрузить статистику. Попробуйте ещё раз.",
+    "Statistikani yuklab bo‘lmadi. Qayta urinib ko‘ring."
+  ],
+  "Period": [
+    "Период",
+    "Davr"
+  ],
+  "7 days": [
+    "7 дней",
+    "7 kun"
+  ],
+  "30 days": [
+    "30 дней",
+    "30 kun"
+  ],
+  "90 days": [
+    "90 дней",
+    "90 kun"
+  ],
+  "Example figures: the demo has no real orders. Your real statistics appear here after launch.": [
+    "Пример данных: в демо нет реальных заказов. После запуска здесь будет ваша настоящая статистика.",
+    "Namuna ma’lumotlar: demoda haqiqiy buyurtmalar yo‘q. Ishga tushirilgach, bu yerda haqiqiy statistikangiz ko‘rinadi."
+  ],
+  "Requested value": [
+    "Сумма заявок",
+    "So‘rovlar summasi"
+  ],
+  "vs the previous period": [
+    "к предыдущему периоду",
+    "oldingi davrga nisbatan"
+  ],
+  "Average order": [
+    "Средний чек",
+    "O‘rtacha chek"
+  ],
+  "New customers": [
+    "Новые клиенты",
+    "Yangi mijozlar"
+  ],
+  "Requests by day": [
+    "Заявки по дням",
+    "Kunlar bo‘yicha so‘rovlar"
+  ],
+  "Show chart": [
+    "Показать график",
+    "Grafikni ko‘rsatish"
+  ],
+  "Show table": [
+    "Показать таблицей",
+    "Jadval ko‘rinishida"
+  ],
+  "Day": [
+    "День",
+    "Kun"
+  ],
+  "From view to order": [
+    "От просмотра до заказа",
+    "Ko‘rishdan buyurtmagacha"
+  ],
+  "Views and bag additions are counted anonymously from the storefront.": [
+    "Просмотры и добавления в корзину считаются анонимно.",
+    "Ko‘rishlar va savatga qo‘shishlar anonim hisoblanadi."
+  ],
+  "Best-selling fragrances": [
+    "Самые заказываемые ароматы",
+    "Eng ko‘p buyurtma qilingan atirlar"
+  ],
+  "pcs": [
+    "шт.",
+    "dona"
+  ],
+  "Top houses": [
+    "Лучшие бренды",
+    "Yetakchi brendlar"
+  ],
+  "Most viewed": [
+    "Чаще всего смотрят",
+    "Eng ko‘p ko‘rilgan"
+  ],
+  "in bag": [
+    "в корзину",
+    "savatga"
+  ],
+  "Views appear here once customers open the shop.": [
+    "Просмотры появятся, когда покупатели начнут открывать магазин.",
+    "Xaridorlar do‘konni ochishni boshlaganda ko‘rishlar shu yerda paydo bo‘ladi."
+  ],
+  "Order not found": [
+    "Заявка не найдена.",
+    "So‘rov topilmadi."
   ]
 }

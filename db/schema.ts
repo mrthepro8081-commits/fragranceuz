@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, blob, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, blob, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
 export const productOverrides = sqliteTable('product_overrides', {
  id:text('id').primaryKey(), data:text('data').notNull(), updatedAt:text('updated_at').notNull()
 });
@@ -24,3 +24,7 @@ export const productImages = sqliteTable('product_images', {
 export const productRemovals = sqliteTable('product_removals', {
  key:text('key').primaryKey(), removedAt:text('removed_at').notNull()
 });
+// Anonymous daily counters per product (no personal data): how often it was opened and added to the bag.
+export const productEvents = sqliteTable('product_events', {
+ day:text('day').notNull(), productId:text('product_id').notNull(), views:integer('views').notNull().default(0), adds:integer('adds').notNull().default(0)
+},table=>[primaryKey({columns:[table.day,table.productId]})]);

@@ -1,7 +1,7 @@
 import type {CustomerRecord,StoreStats} from './types';
 // Contacts are derived from submitted, durable orders. Merely typing a form
 // never creates a customer record. Phone formatting does not duplicate clients.
-const phoneKey=["' '","'+'","'-'","'('","')'","char(9)","char(10)","char(13)","char(160)","char(8239)"].reduce((sql,char)=>`replace(${sql},${char},'')`,"json_extract(data,'$.customer.phone')");
+export const phoneKey=["' '","'+'","'-'","'('","')'","char(9)","char(10)","char(13)","char(160)","char(8239)"].reduce((sql,char)=>`replace(${sql},${char},'')`,"json_extract(data,'$.customer.phone')");
 export async function customerRecords(db:D1Database):Promise<CustomerRecord[]>{
  const rows=await db.prepare(`WITH contacts AS (
  SELECT ${phoneKey} AS key,
