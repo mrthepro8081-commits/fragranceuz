@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';import {createHmac} from 'node:crypto';import fs from 'node:fs';import {PDFDocument} from 'pdf-lib';
-const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync(new URL('../drizzle/0000_curved_maginty.sql',import.meta.url),'utf8'));sql.exec(fs.readFileSync(new URL('../drizzle/0001_jittery_ricochet.sql',import.meta.url),'utf8'));
+const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync(new URL('../drizzle/0000_curved_maginty.sql',import.meta.url),'utf8'));sql.exec(fs.readFileSync(new URL('../drizzle/0001_jittery_ricochet.sql',import.meta.url),'utf8'));sql.exec(fs.readFileSync(new URL('../drizzle/0003_product_images_and_removals.sql',import.meta.url),'utf8'));
 const DB={prepare(query){let args=[];return {bind(...v){args=v;return this},async first(){return sql.prepare(query).get(...args)||null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){return {meta:{changes:sql.prepare(query).run(...args).changes}}}}}};
 const token='000000:isolated-report-test-not-real';globalThis.__TEST_ENV={DB,TELEGRAM_BOT_TOKEN:token,OWNER_TELEGRAM_ID:'111111111',ADMIN_TELEGRAM_IDS:'222222222'};
 const {GET:store}=await import('../.sites-runtime/tests/store.mjs');

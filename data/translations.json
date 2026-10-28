@@ -1774,5 +1774,205 @@
   "Lilac": [
     "Сиреневый",
     "Binafsharang"
+  ],
+  "Fragrance deleted.": [
+    "Аромат удалён.",
+    "Atir o‘chirildi."
+  ],
+  "Published. It is now in the storefront.": [
+    "Опубликовано. Аромат уже на витрине.",
+    "E’lon qilindi. Atir allaqachon vitrinada."
+  ],
+  "Save or cancel your changes first.": [
+    "Сначала сохраните или отмените изменения.",
+    "Avval o‘zgarishlarni saqlang yoki bekor qiling."
+  ],
+  "Catalog": [
+    "Каталог",
+    "Katalog"
+  ],
+  "Shown": [
+    "На витрине",
+    "Vitrinada"
+  ],
+  "Paste the link into the field manually.": [
+    "Вставьте ссылку в поле вручную.",
+    "Havolani maydonga qo‘lda joylashtiring."
+  ],
+  "New arrival from the channel": [
+    "Новинка из канала",
+    "Kanaldagi yangilik"
+  ],
+  "Add by link": [
+    "Добавить по ссылке",
+    "Havola orqali qo‘shish"
+  ],
+  "Copy the post link in @fragranceuz (Share → Copy link) and paste it here. Photo, name, sizes and prices are filled in for you to check.": [
+    "Скопируйте ссылку на пост в @fragranceuz («Поделиться» → «Копировать ссылку») и вставьте сюда. Фото, название, объёмы и цены заполнятся сами — вам останется проверить.",
+    "@fragranceuz dagi post havolasini nusxalang («Ulashish» → «Havolani nusxalash») va shu yerga joylashtiring. Rasm, nom, hajm va narxlar o‘zi to‘ldiriladi — faqat tekshirasiz."
+  ],
+  "Paste": [
+    "Вставить",
+    "Joylashtirish"
+  ],
+  "Reading the post…": [
+    "Читаем пост…",
+    "Post o‘qilmoqda…"
+  ],
+  "Paste the @fragranceuz post link of this product.": [
+    "Вставьте ссылку на пост @fragranceuz с этим товаром.",
+    "Ushbu mahsulot joylangan @fragranceuz post havolasini kiriting."
+  ],
+  "Every bottle option needs a volume and a price.": [
+    "Для каждого варианта укажите объём и цену.",
+    "Har bir variant uchun hajm va narxni kiriting."
+  ],
+  "Use the exact Fragrantica fragrance page linked in the channel post.": [
+    "Укажите точную страницу аромата на Fragrantica из поста канала.",
+    "Kanal postidagi aynan shu atirning Fragrantica sahifasini kiriting."
+  ],
+  "Enter the fragrance name.": [
+    "Укажите название аромата.",
+    "Atir nomini kiriting."
+  ],
+  "No photo yet": [
+    "Фото пока нет",
+    "Hozircha rasm yo‘q"
+  ],
+  "Replace photo": [
+    "Заменить фото",
+    "Rasmni almashtirish"
+  ],
+  "Add photo": [
+    "Добавить фото",
+    "Rasm qo‘shish"
+  ],
+  "This photo could not be read. Try a JPEG or PNG.": [
+    "Не удалось открыть фото. Попробуйте JPEG или PNG.",
+    "Rasmni ochib bo‘lmadi. JPEG yoki PNG formatini sinab ko‘ring."
+  ],
+  "New fragrance · check before publishing": [
+    "Новый аромат · проверьте перед публикацией",
+    "Yangi atir · e’lon qilishdan oldin tekshiring"
+  ],
+  "Shown in the storefront": [
+    "Показывается на витрине",
+    "Vitrinada ko‘rsatiladi"
+  ],
+  "Hidden from the storefront": [
+    "Скрыт с витрины",
+    "Vitrinadan yashirilgan"
+  ],
+  "Customers can see and order it.": [
+    "Покупатели видят его и могут заказать.",
+    "Xaridorlar uni ko‘radi va buyurtma bera oladi."
+  ],
+  "Customers do not see it. You can show it again any time.": [
+    "Покупатели его не видят. Вернуть на витрину можно в любой момент.",
+    "Xaridorlar uni ko‘rmaydi. Istalgan vaqtda qayta ko‘rsatish mumkin."
+  ],
+  "Delete fragrance": [
+    "Удалить аромат",
+    "Atirni o‘chirish"
+  ],
+  "Save changes": [
+    "Сохранить изменения",
+    "O‘zgarishlarni saqlash"
+  ],
+  "Publish": [
+    "Опубликовать",
+    "E’lon qilish"
+  ],
+  "Shown in the storefront and bag.": [
+    "Отображается на витрине и в корзине.",
+    "Vitrina va savatda ko‘rsatiladi."
+  ],
+  "Link added": [
+    "Ссылка есть",
+    "Havola bor"
+  ],
+  "Link changed": [
+    "Ссылка изменена",
+    "Havola o‘zgartirildi"
+  ],
+  "Photo": [
+    "Фото",
+    "Rasm"
+  ],
+  "New photo": [
+    "Новое фото",
+    "Yangi rasm"
+  ],
+  "New option": [
+    "Новый вариант",
+    "Yangi variant"
+  ],
+  "Removed": [
+    "Удалён",
+    "O‘chirildi"
+  ],
+  "In the storefront": [
+    "На витрине",
+    "Vitrinada"
+  ],
+  "Publish a new fragrance?": [
+    "Опубликовать новый аромат?",
+    "Yangi atirni e’lon qilasizmi?"
+  ],
+  "It will appear in the storefront right after you confirm.": [
+    "Он появится на витрине сразу после подтверждения.",
+    "Tasdiqlaganingizdan so‘ng darhol vitrinada paydo bo‘ladi."
+  ],
+  "It will be saved as hidden.": [
+    "Он будет сохранён скрытым.",
+    "U yashirin holda saqlanadi."
+  ],
+  "Show in the storefront?": [
+    "Вернуть на витрину?",
+    "Vitrinaga qaytarilsinmi?"
+  ],
+  "Hide from the storefront?": [
+    "Скрыть с витрины?",
+    "Vitrinadan yashirilsinmi?"
+  ],
+  "Delete this fragrance?": [
+    "Удалить этот аромат?",
+    "Ushbu atir o‘chirilsinmi?"
+  ],
+  "It disappears from the storefront and the admin list. Adding its channel post again brings it back.": [
+    "Он исчезнет с витрины и из списка товаров. Чтобы вернуть, снова добавьте его пост по ссылке.",
+    "U vitrinadan va mahsulotlar ro‘yxatidan yo‘qoladi. Qaytarish uchun postini havola orqali qayta qo‘shing."
+  ],
+  "On": [
+    "Вкл.",
+    "Yoqilgan"
+  ],
+  "Off": [
+    "Выкл.",
+    "O‘chirilgan"
+  ],
+  "Change order status?": [
+    "Изменить статус заявки?",
+    "So‘rov holati o‘zgartirilsinmi?"
+  ],
+  "Nothing has changed yet.": [
+    "Пока ничего не изменено.",
+    "Hozircha hech narsa o‘zgarmadi."
+  ],
+  "Delete": [
+    "Удалить",
+    "O‘chirish"
+  ],
+  "Invalid product": [
+    "Неверный товар.",
+    "Mahsulot noto‘g‘ri."
+  ],
+  "Product not found": [
+    "Товар не найден.",
+    "Mahsulot topilmadi."
+  ],
+  "Confirm": [
+    "Подтвердить",
+    "Tasdiqlash"
   ]
 }

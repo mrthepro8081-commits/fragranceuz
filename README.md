@@ -14,6 +14,20 @@ The customer storefront (`app/storefront.tsx`, `app/boutique.css`, `app/boutique
 - **Deep links:** `https://t.me/<bot>/<app>?startapp=<product id>` (or `/?product=<id>`) opens that perfume directly — use it in channel posts.
 - Light and dark themes, Russian and Uzbek copy (all new keys are in `data/translations.json`), self-hosted fonts (Cormorant Garamond, Manrope, Oswald via `@fontsource`).
 
+## Store management (admin)
+
+Open the shop from the bot with the owner's Telegram account (or an ID in `ADMIN_TELEGRAM_IDS`) and tap the settings icon in the header, or go to `/admin`. Locally, `/demo` shows the same admin on separate demo tables.
+
+- **Add a new arrival by link:** in @fragranceuz tap Share → Copy link on the post, paste it into "Add by link". The post's photo, name, house, sizes, prices, audience, concentration, country, year and Fragrantica link are read, shown in the editor for checking, then published after confirmation. Pasting the link of a product that is already listed shows which details and prices changed.
+- **Edit / update prices:** tap a product, change anything (prices are typed with thousand separators, testers are a toggle), Save → the confirmation sheet lists every change ("75 мл: 3 120 000 → 2 990 000 сум") and only "Confirm" writes it.
+- **Hide or delete:** the visibility switch hides a product (reversible, listed under "Hidden"); "Delete fragrance" removes it for good (re-importing its post brings it back).
+- **Photos:** when a product is saved, its channel photo is downloaded and stored in the database (`product_images`), so it keeps working after Telegram's CDN link expires. "Replace photo" uploads a photo from the phone.
+- Orders (status changes, alert retry), statistics, customers (PDF) and store settings use the same confirm-before-save flow.
+
+Migration `drizzle/0003_product_images_and_removals.sql` adds the photo and deletion tables; apply it like the earlier ones.
+
+`preview/` builds a standalone page (shop + admin, demo data kept in the browser) for sharing without a server: `npx vite build --config preview/vite.config.mjs && python3 preview/catalog.py && node preview/inline.mjs`.
+
 ## Current catalog
 
 The public channel was refreshed for **28 April–28 October 2026**, Asia/Tashkent. The audit covers 574 messages across 29 pages, crossing the cutoff on a page dated 20 April. There are **539 catalog offers** from 543 priced posts after removing 4 exact older repeats. Distinct sizes, concentrations, testers, partial bottles and sets remain separate offers. 537 real source photos are stored locally; 2 posts have no image. 22 entries have no single matching scent link and 10 have no explicit release year; those fields remain empty. No substitute Fragrantica URLs, release years, stock counts or scent notes are invented.

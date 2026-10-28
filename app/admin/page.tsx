@@ -1,65 +1,375 @@
 'use client';
-import {useEffect,useState} from 'react';
-import Link from 'next/link';
-import {ProductImport} from './product-import';
-import {ConfirmChanges,type AdminChange} from './confirm-changes';
-import {ShopSettings} from './settings';
-import {defaultSettings,type StoreSettings} from '../../lib/settings';
-import {startingVariant,startingPrice} from '../../lib/catalog';
-import {Statistics,Customers} from './insights';
-import {ArrowUpRight,Plus,X,Save,Trash2,Loader2,LockKeyhole,Check,Eye,EyeOff,Send,RefreshCw} from 'lucide-react';
-import type {Product,OrderData,StoreStats,CustomerRecord} from '../../lib/types';
-import {formatMoney,formatProductName,formatBottle,formatCountry,formatConcentration,errorText,formatDate} from '../../lib/i18n';
-import {useLanguage,LanguageSwitch} from '../language';
-import {Brand,LogoLoader} from '../brand';
-import {ThemeToggle} from '../theme';
-import {Modal} from '../modal';
-import {productInput} from '../../lib/validation';
-type Order={id:string;data:OrderData;total:number;status:string;notification:string;created_at:string};
-export default function Admin({demo=false}:{demo?:boolean}){
- const {lang,setLang,t}=useLanguage();const money=(n:number)=>formatMoney(n,lang);const bottle=(s:string)=>formatBottle(s,lang);
- const [rowsShown,setRowsShown]=useState(30),[importing,setImporting]=useState(false),[confirmation,setConfirmation]=useState<{payload:AdminChange;resolve:(ok:boolean)=>void}|null>(null);
- const [settings,setSettings]=useState<StoreSettings>(defaultSettings),[visibility,setVisibility]=useState('all'),[orderQuery,setOrderQuery]=useState(''),[orderStatus,setOrderStatus]=useState('all'),[baseline,setBaseline]=useState(''),[discard,setDiscard]=useState(false),[settingsDirty,setSettingsDirty]=useState(false),[pendingTab,setPendingTab]=useState('');
- const [authorized,setAuthorized]=useState(false),[role,setRole]=useState<'owner'|'admin'|'demo'|null>(null),[checking,setChecking]=useState(true);
- const [products,setProducts]=useState<Product[]>([]),[orders,setOrders]=useState<Order[]>([]),[tab,setTab]=useState('products'),[query,setQuery]=useState('');
- const [statistics,setStatistics]=useState<StoreStats|null>(null),[customers,setCustomers]=useState<CustomerRecord[]>([]),[exporting,setExporting]=useState(false);
- const [editing,setEditing]=useState<Product|null>(null),[isNew,setIsNew]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
- useEffect(()=>setRowsShown(30),[query,visibility]);
- function changeTab(next:string){if(settingsDirty&&tab==='settings'&&next!==tab){setPendingTab(next);return;}setTab(next)}
- function headers(){return {'Content-Type':'application/json','x-telegram-init-data':window.Telegram?.WebApp?.initData||''}}
- useEffect(()=>{window.Telegram?.WebApp?.ready();connect(true)},[]);
- async function connect(openTarget=false){setChecking(true);setError('');try{const r=await fetch(demo?'/api/demo?management=1':'/api/admin',{headers:headers(),signal:AbortSignal.timeout(15000)});if(r.status===401){setAuthorized(false);setRole(null);setStatistics(null);setCustomers([]);setOrders([]);setProducts([]);return;}const d=await r.json() as {error?:string;role:'owner'|'admin'|'demo';products:Product[];orders:Order[];statistics:StoreStats;customers:CustomerRecord[];settings:StoreSettings};if(!r.ok)throw new Error(d.error);setAuthorized(true);setRole(d.role);setSettings(d.settings);setProducts(d.products);setOrders(d.orders);setStatistics(d.statistics);setCustomers(d.customers);if(openTarget){const id=new URLSearchParams(location.search).get('product');const target=d.products.find(p=>p.id===id);if(target)edit(target)}}catch(e){setError(e instanceof Error?e.message:'Could not connect')}finally{setChecking(false)}}
- async function commitAction(payload:AdminChange){setBusy(true);setError('');try{const r=await fetch(demo?'/api/demo':'/api/admin',{method:'POST',headers:headers(),body:JSON.stringify({...payload,confirmed:true}),signal:AbortSignal.timeout(20000)});const d=await r.json() as {error?:string};if(!r.ok){if(r.status===401){setAuthorized(false);setRole(null);setOrders([]);setProducts([]);setCustomers([]);setStatistics(null);}throw new Error(d.error);}await connect();return true}catch(e){setError(e instanceof Error?e.message:'Could not save');return false}finally{setBusy(false)}}
- function action(payload:AdminChange){return new Promise<boolean>(resolve=>setConfirmation({payload,resolve}))}
- function cancelConfirmation(){if(busy)return;confirmation?.resolve(false);setConfirmation(null)}
- async function confirmChange(){const pending=confirmation;if(!pending||busy)return;const ok=await commitAction(pending.payload);pending.resolve(ok);setConfirmation(null);if(ok&&!editing)setMessage('Changes saved.')}
- async function downloadCustomers(){if(!authorized||exporting||demo)return;setExporting(true);setError('');try{const r=await fetch('/api/admin/report?lang='+lang,{headers:headers(),signal:AbortSignal.timeout(15000)});if(!r.ok){if(r.status===401){setAuthorized(false);setRole(null);setCustomers([]);setStatistics(null);setOrders([]);setProducts([])}throw new Error('Could not export customers. Please try again.')}const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download='fragranceuz-customers-'+new Date().toISOString().slice(0,10)+'-'+lang+'.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch{setError('Could not export customers. Please try again.')}finally{setExporting(false)}}
- function edit(p:Product){setBaseline(JSON.stringify(p));setDiscard(false);setEditing(structuredClone(p));setIsNew(false);setError('');setMessage('')}
- function add(){const product:Product={id:'',title:'',name:'',brand:'',variants:[{label:'',volume:0,price:0}],gender:'unspecified',concentration:null,country:null,year:null,fragranticaUrl:null,sourceUrl:'',sourceDate:null,importedAt:new Date().toISOString().slice(0,10),photoSource:null,image:null,active:true,sourceText:''};setEditing(product);setBaseline(JSON.stringify(product));setDiscard(false);setIsNew(true);setError('');setMessage('')}
- const dirty=!!editing&&JSON.stringify(editing)!==baseline;
- function closeEditor(){if(busy)return;if(dirty)setDiscard(true);else setEditing(null)}
- useEffect(()=>{if(!dirty)return;const handler=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',handler);return()=>window.removeEventListener('beforeunload',handler)},[dirty]);
+import '../boutique/fonts';
+import './admin.css';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowUpRight, Check, ChevronRight, LockKeyhole, Moon, RefreshCw, Search, Send, Sun } from 'lucide-react';
+import type { CustomerRecord, Product, StoreStats } from '../../lib/types';
+import { defaultSettings, type StoreSettings } from '../../lib/settings';
+import { errorText, formatMoney, formatBottle } from '../../lib/i18n';
+import { useLanguage, LanguageSwitch } from '../language';
+import { BottleMark, Shot } from '../boutique/ui';
+import { tints, toneOf } from '../boutique/tone';
+import { cheapest, displayName } from '../boutique/format';
+import { ConfirmSheet, type AdminChange } from './confirm';
+import { LinkImport, ProductEditor, blankProduct } from './editor';
+import { CustomersPanel, OrdersPanel, SettingsPanel, StatsPanel, type Order } from './panels';
 
- function update<K extends keyof Product>(field:K,value:Product[K]){setEditing(p=>p?{...p,[field]:value}:null)}
- function variantLabel(volume:number,oldLabel:string){const tester=/tester|тестер/i.test(oldLabel);return volume+' мл'+(tester?' · Tester':'');}
- async function save(e:React.FormEvent){e.preventDefault();if(!editing||!authorized)return;const p={...editing,title:editing.name+' '+editing.brand,variants:editing.variants.map(v=>({...v,label:v.label.trim()||variantLabel(v.volume,'')}))};const result=productInput.safeParse(p);if(!result.success){setError('Product details are invalid. Check the source, Fragrantica link, price, and volume.');return;}if(await action({action:'save',product:result.data})){setEditing(null);setMessage('Product saved. The storefront now uses these details.')}}
- const visibleOrders=orders.filter(o=>(orderStatus==='all'||o.status===orderStatus)&&`${o.id} ${o.data.customer.name} ${o.data.customer.phone} ${o.data.customer.address}`.toLowerCase().includes(orderQuery.trim().toLowerCase()));
- const list=products.filter(p=>(visibility==='all'||p.active===(visibility==='visible'))&&`${p.name} ${p.brand}`.toLowerCase().includes(query.toLowerCase()));
- return <><header className="admin-header"><Link href={demo?"/?demo=1":"/"} aria-label="FRAGRANCE UZ"><Brand compact/></Link><ThemeToggle lang={lang}/><LanguageSwitch lang={lang} setLang={setLang}/><Link href={demo?"/?demo=1":"/"} className="text-link">{t('Back to store')} <ArrowUpRight size={18}/></Link></header>
- <main className="admin-main">{demo&&<div className="demo-notice"><strong>{t("Demo workspace")}</strong><p>{t("Confirmed product and shop changes are saved in this demo. Real orders and customer records are kept separate.")}</p></div>}<div className="admin-title"><div><h1>{t('Store management')}</h1>{authorized&&<p className="role-badge"><Check size={16}/>{t(demo?'Demo administrator':role==='owner'?'Store owner':'Store administrator')}</p>}</div>{authorized&&<button className="secondary" disabled={busy||checking} onClick={()=>connect()} aria-label={t('Refresh')}><RefreshCw size={18}/>{t('Refresh')}</button>}</div>
- {checking&&!authorized?<LogoLoader lang={lang}/>:!authorized?<div className="admin-locked"><LockKeyhole size={42} strokeWidth={1.2}/><h2>{t('Access for owner and admins only')}</h2><p>{t('Open the store through its Telegram bot using an authorized account.')}</p><a className="primary" href="https://t.me/fragranceuz_bot?startapp" target="_blank" rel="noreferrer">{t('Open in Telegram')}<Send size={18}/></a><button className="text-link" onClick={()=>connect()}>{t('Check access again')}<RefreshCw size={16}/></button></div>:<>
- {message&&<p className="admin-toast" role="status"><Check size={17}/>{t(message)}</p>}
- <div className="admin-tabs"><button className={'chip '+(tab==='products'?'selected':'')} onClick={()=>changeTab('products')}>{t('Products')} ({products.length})</button><button className={'chip '+(tab==='orders'?'selected':'')} onClick={()=>changeTab('orders')}>{t('Orders')} ({statistics?.totalOrders??orders.length})</button><button className={'chip '+(tab==='statistics'?'selected':'')} onClick={()=>changeTab('statistics')}>{t('Statistics')}</button><button className={'chip '+(tab==='customers'?'selected':'')} onClick={()=>changeTab('customers')}>{t('Customers')} ({customers.length})</button><button className={'chip '+(tab==='settings'?'selected':'')} onClick={()=>changeTab('settings')}>{t('Store settings')}</button></div>
- {pendingTab&&<div className="discard-prompt" role="alert"><strong>{t('Discard unsaved changes?')}</strong><p>{t('Your changes have not been saved.')}</p><button className="secondary" onClick={()=>setPendingTab('')}>{t('Keep editing')}</button><button className="primary" onClick={()=>{setSettingsDirty(false);setTab(pendingTab);setPendingTab('')}}>{t('Discard changes')}</button></div>}
- {tab==='settings'?<ShopSettings onDirtyChange={setSettingsDirty} settings={settings} busy={busy} save={async value=>{const ok=await action({action:'settings',settings:value});if(ok)setMessage('Settings saved.');return !!ok}}/>:tab==='statistics'?<Statistics statistics={statistics} lang={lang}/>:tab==='customers'?demo?<div className="empty"><h2>{t('Customer database')}</h2><p>{t('Real customer data and PDF reports are available only to verified store staff.')}</p></div>:<Customers customers={customers} lang={lang} download={downloadCustomers} exporting={exporting}/>:tab==='products'?<><div className="admin-controls"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t('Find a fragrance…')} aria-label={t('Find a fragrance')}/><select aria-label={t('Product visibility')} value={visibility} onChange={e=>setVisibility(e.target.value)}>{[['all','All products'],['visible','Visible'],['hidden','Hidden']].map(([value,label])=><option key={value} value={value}>{t(label)}</option>)}</select><button className="primary" disabled={busy} onClick={()=>setImporting(true)}>{t('Add product')}<Plus size={19}/></button></div><div className="admin-list">{list.slice(0,rowsShown).map(p=><article key={p.id} className={'admin-row '+(!p.active?'admin-inactive':'')}>{p.image&&<img src={p.image} alt={p.name} loading="lazy"/>}<div><span className="brand-label">{p.brand}</span><h3>{formatProductName(p.name,lang)}</h3><small>{money(startingPrice(p))} · {bottle(p.variants[startingVariant(p)].label)} · {t(p.active?'Visible':'Hidden')}</small></div><button className="icon-button" disabled={busy} title={t(p.active?'Hide product':'Show product')} aria-label={t(p.active?'Hide product':'Show product')+': '+p.name} onClick={()=>action({action:'save',product:{...p,active:!p.active}})}>{p.active?<Eye size={19}/>:<EyeOff size={19}/>}</button><button className="secondary" disabled={busy} onClick={()=>edit(p)}>{t('Edit')}</button></article>)}</div>{list.length>rowsShown&&<button className="secondary load-more" onClick={()=>setRowsShown(n=>n+30)}>{t("Show more fragrances")}</button>}{!list.length&&<p className="admin-note">{t('No fragrances found.')}</p>}</>:<>{statistics&&statistics.totalOrders>100&&<p className="latest-orders-note">{t('Latest 100 requests')}</p>}<div className="admin-controls order-controls"><input value={orderQuery} onChange={e=>setOrderQuery(e.target.value)} aria-label={t('Search orders')} placeholder={t('Name, phone or order reference')}/><select aria-label={t('Order status')} value={orderStatus} onChange={e=>setOrderStatus(e.target.value)}><option value="all">{t('All statuses')}</option>{['new','confirmed','completed','cancelled'].map(status=><option key={status} value={status}>{t('status.'+status)}</option>)}</select></div>{visibleOrders.length===0?<div className="empty"><h2>{t('All quiet, for now.')}</h2><p>{t('New order requests will appear here.')}</p></div>:visibleOrders.map(o=><article className="admin-order" key={o.id}><span className="eyebrow">#{o.id.slice(0,8)} · {formatDate(o.created_at,lang,true)}</span><h3>{o.data.customer.name}</h3><a className="order-phone" href={'tel:'+o.data.customer.phone}>{o.data.customer.phone}</a><p>{o.data.customer.address}</p><p style={{marginTop:15}}>{o.data.items.map(p=>`${p.brand} ${p.name} · ${bottle(p.label)} × ${p.quantity} · ${money(p.price*p.quantity)}`).join('\n')}</p><p><strong>{money(o.total)}</strong>{o.data.customer.note?'\n'+t('Note')+': '+o.data.customer.note:''}</p><label><span className="sr-only">{t('Order status')}</span><select value={o.status} disabled={busy} onChange={e=>action({action:'order-status',id:o.id,status:e.target.value})}>{['new','confirmed','completed','cancelled'].map(s=><option key={s} value={s}>{t('status.'+s)}</option>)}</select></label><small>{t('Telegram alert')}: {t('notification.'+o.notification)}</small>{o.notification==='failed'&&<button className="text-link" disabled={busy} onClick={()=>action({action:'retry-notification',id:o.id})}>{t('Retry Telegram alert')}</button>}</article>)}</>}
- </>}{error&&!editing&&<p className="error-message" role="alert">{errorText(error,lang)}</p>}</main>
- {editing&&authorized&&<Modal close={closeEditor} title={t(isNew?'Add a fragrance':'Edit fragrance')} className="admin-editor"><button className="close-button" disabled={busy} onClick={closeEditor} aria-label={t('Close editor')}><X size={23}/></button><h2>{t(isNew?'Add a fragrance':'Edit fragrance')}</h2><form className="admin-form" onSubmit={save}>{discard&&<div className="discard-prompt wide" role="alert"><strong>{t("Discard unsaved changes?")}</strong><p>{t("Your changes have not been saved.")}</p><button type="button" className="secondary" onClick={()=>setDiscard(false)}>{t("Keep editing")}</button><button type="button" className="primary" onClick={()=>setEditing(null)}>{t("Discard changes")}</button></div>}<fieldset className="editor-fields wide" disabled={busy}>
- <fieldset className="wide"><legend>{t('Main details')}</legend><div className="admin-field-grid"><label className="wide">{t('Original channel post')}<input required type="url" readOnly={!isNew} value={editing.sourceUrl} onChange={e=>{const url=e.target.value;setEditing(p=>p?{...p,sourceUrl:url,id:url.match(/\/fragranceuz\/(\d+)$/)?.[1]||''}:null)}} placeholder="https://t.me/fragranceuz/…"/>{editing.sourceUrl&&<a className="source-helper" href={editing.sourceUrl} target="_blank" rel="noreferrer">{t('Open source post')}<ArrowUpRight size={14}/></a>}</label><label>{t('Fragrance name')}<input required maxLength={150} value={editing.name} onChange={e=>update('name',e.target.value)} autoComplete="off"/></label><label>{t('Fragrance house')}<input maxLength={100} value={editing.brand} onChange={e=>update('brand',e.target.value)} autoComplete="off"/></label><label>{t('Audience')}<select value={editing.gender} onChange={e=>update('gender',e.target.value)}>{[['unspecified','Unspecified'],['women','For her'],['men','For him'],['unisex','Unisex']].map(([value,label])=><option key={value} value={value}>{t(label)}</option>)}</select></label><label>{t('Concentration')}<select value={editing.concentration||''} onChange={e=>update('concentration',e.target.value||null)}>{[...new Set(['','eau de parfum (EDP)','eau de toilette (EDT)','parfum','extrait de parfum','elixir de parfum','extrait extreme','parfum intense',editing.concentration||''])].map(value=><option key={value} value={value}>{value?formatConcentration(value,lang):t('Unspecified')}</option>)}</select></label></div></fieldset>
- <fieldset className="wide"><legend>{t('Bottle and price')}</legend>{editing.variants.map((v,i)=><div className="variant-editor" key={i}><label>{t('Volume')} ({t('ml')})<input required type="number" inputMode="decimal" min="0.1" step="0.1" max="5000" value={v.volume||''} onChange={e=>{const volume=Number(e.target.value);update('variants',editing.variants.map((x,j)=>j===i?{...x,volume,label:variantLabel(volume,x.label)}:x))}}/></label><label>{t('Price')} ({lang==='ru'?'сум':'so‘m'})<input required type="number" inputMode="numeric" min="1" max="100000000" value={v.price||''} onChange={e=>update('variants',editing.variants.map((x,j)=>j===i?{...x,price:Number(e.target.value)}:x))}/></label><label className="check-label"><input type="checkbox" checked={/tester|тестер/i.test(v.label)} onChange={e=>update('variants',editing.variants.map((x,j)=>j===i?{...x,label:x.volume+' мл'+(e.target.checked?' · Tester':'')}:x))}/>{t('Tester')}</label><button type="button" disabled={editing.variants.length===1} onClick={()=>update('variants',editing.variants.filter((_,j)=>i!==j))} aria-label={t('Remove bottle option')}><Trash2 size={18}/></button></div>)}<button type="button" className="text-link" disabled={editing.variants.length>=10} onClick={()=>update('variants',[...editing.variants,{label:'',volume:0,price:0}])}>{t('Add bottle option')}<Plus size={17}/></button></fieldset>
- <label className="wide">{t('Exact Fragrantica link from the post')}<input type="url" value={editing.fragranticaUrl||''} onChange={e=>update('fragranticaUrl',e.target.value||null)} placeholder="https://www.fragrantica.ru/perfume/…"/><small>{t('Copy the matching scent link from the channel post. Leave empty if none is provided.')}</small></label>
- <details className="admin-more wide"><summary>{t('More product details')}</summary><div className="admin-field-grid"><label className="wide">{t('Product image URL')}<input value={editing.image||''} onChange={e=>update('image',e.target.value||null)} placeholder="https://…"/></label><label>{t('Country')}<select value={editing.country||''} onChange={e=>update('country',e.target.value||null)}>{[...new Set(['','Англия','Испания','Италия','ОАЭ','Оман','США','Франция','Швейцария','Южная Корея',editing.country||''])].map(value=><option key={value} value={value}>{value?formatCountry(value,lang):t('Unspecified')}</option>)}</select></label><label>{t('Release year')}<input value={(editing.year||'').replace(/г\.?$/,'')} onChange={e=>update('year',e.target.value||null)}/></label></div></details>
- <label className="wide check-label"><input type="checkbox" checked={editing.active} onChange={e=>update('active',e.target.checked)}/>{t('Visible in the storefront')}</label>{error&&<p className="error-message wide" role="alert">{errorText(error,lang)}</p>}</fieldset><div className="editor-actions wide"><button type="button" className="secondary" disabled={busy} onClick={closeEditor}>{t('Cancel')}</button><button className="primary" type="submit" disabled={busy}>{busy?<Loader2 size={18} className="spin"/>:<Save size={18}/>} {t('Save fragrance')}</button></div></form></Modal>}
- {importing&&authorized&&<Modal title={t('Add from a post')} close={()=>{if(!busy)setImporting(false)}} className="import-modal"><ProductImport demo={demo} headers={headers} existingIds={products.map(p=>p.id)} close={()=>setImporting(false)} manual={()=>{setImporting(false);add()}} publish={async product=>{const ok=await commitAction({action:'save',product});if(ok)setMessage('Product saved. The storefront now uses these details.');return !!ok}}/></Modal>}
- {confirmation&&<Modal title={t('Confirm your changes')} close={cancelConfirmation} className="confirm-modal"><ConfirmChanges change={confirmation.payload} busy={busy} confirm={confirmChange} cancel={cancelConfirmation}/></Modal>}
- </>;
+type Role = 'owner' | 'admin' | 'demo';
+type Editing = { product: Product; before: Product | null; warnings: string[] };
+type Tab = 'products' | 'orders' | 'stats' | 'customers' | 'settings';
+const PAGE = 40;
+
+function telegram() {
+  return typeof window === 'undefined' ? undefined : window.Telegram?.WebApp;
+}
+
+export default function Admin({ demo = false }: { demo?: boolean }) {
+  const { lang, setLang, t } = useLanguage();
+  const [checking, setChecking] = useState(true);
+  const [role, setRole] = useState<Role | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [statistics, setStatistics] = useState<StoreStats | null>(null);
+  const [customers, setCustomers] = useState<CustomerRecord[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>(defaultSettings);
+  const [tab, setTab] = useState<Tab>('products');
+  const [query, setQuery] = useState('');
+  const [visibility, setVisibility] = useState<'all' | 'visible' | 'hidden'>('all');
+  const [shown, setShown] = useState(PAGE);
+  const [editing, setEditing] = useState<Editing | null>(null);
+  const [confirmation, setConfirmation] = useState<{ change: AdminChange; done?: () => void } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [toast, setToast] = useState('');
+  const [error, setError] = useState('');
+  const [settingsDirty, setSettingsDirty] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  const headers = useCallback(
+    () => ({ 'Content-Type': 'application/json', 'x-telegram-init-data': telegram()?.initData || '' }),
+    [],
+  );
+
+  async function connect(openTarget = false) {
+    setChecking(true);
+    setError('');
+    try {
+      const r = await fetch(demo ? '/api/demo?management=1' : '/api/admin', { headers: headers(), signal: AbortSignal.timeout(15000) });
+      if (r.status === 401) {
+        setRole(null);
+        return;
+      }
+      const d = (await r.json()) as {
+        error?: string; role: Role; products: Product[]; orders: Order[]; statistics: StoreStats; customers: CustomerRecord[]; settings: StoreSettings;
+      };
+      if (!r.ok) throw new Error(d.error);
+      setRole(d.role);
+      setProducts(d.products);
+      setOrders(d.orders);
+      setStatistics(d.statistics);
+      setCustomers(d.customers);
+      setSettings(d.settings);
+      if (openTarget) {
+        const target = d.products.find((p) => p.id === new URLSearchParams(location.search).get('product'));
+        if (target) setEditing({ product: target, before: target, warnings: [] });
+      }
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'Could not connect');
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  useEffect(() => {
+    const w = telegram();
+    w?.ready();
+    w?.expand?.();
+    document.documentElement.classList.add('boutique');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- theme lives on <html>, set by the layout script
+    setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    connect(true);
+    return () => document.documentElement.classList.remove('boutique');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try {
+      telegram()?.setHeaderColor?.('#4f0f15');
+      telegram()?.setBackgroundColor?.(theme === 'dark' ? '#140c0c' : '#f6efe4');
+    } catch {}
+  }, [theme]);
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(''), 2600);
+    return () => clearTimeout(id);
+  }, [toast]);
+  useEffect(() => {
+    document.documentElement.classList.toggle('b-locked', Boolean(editing || confirmation));
+  }, [editing, confirmation]);
+  useEffect(() => {
+    const w = telegram();
+    if (!w?.initData || !w.BackButton) return;
+    const back = () => {
+      if (busy) return;
+      if (confirmation) setConfirmation(null);
+      else if (editing) setEditing(null);
+      else location.href = demo ? '/?demo=1' : '/';
+    };
+    w.BackButton.show();
+    w.BackButton.onClick(back);
+    return () => w.BackButton?.offClick(back);
+  }, [confirmation, editing, busy, demo]);
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    setTheme(next);
+    try { localStorage.setItem('fragranceuz-theme', next); } catch {}
+  }
+
+  /* Every write goes through the confirmation sheet first; only "Confirm" sends it to the server. */
+  function ask(change: AdminChange, done?: () => void) {
+    setError('');
+    setConfirmation({ change, done });
+  }
+  async function commit() {
+    if (!confirmation || busy) return;
+    const { change, done } = confirmation;
+    setBusy(true);
+    try {
+      const payload =
+        change.action === 'save' ? { action: 'save', product: change.product, imageUpload: change.imageUpload }
+        : change.action === 'delete' ? { action: 'delete', id: change.id }
+        : change.action === 'settings' ? { action: 'settings', settings: change.settings }
+        : change.action === 'order-status' ? { action: 'order-status', id: change.id, status: change.status }
+        : { action: 'retry-notification', id: change.id };
+      const r = await fetch(demo ? '/api/demo' : '/api/admin', {
+        method: 'POST', headers: headers(), body: JSON.stringify({ ...payload, confirmed: true }), signal: AbortSignal.timeout(30000),
+      });
+      const d = (await r.json()) as { error?: string };
+      if (!r.ok) {
+        if (r.status === 401) setRole(null);
+        throw new Error(d.error);
+      }
+      setConfirmation(null);
+      done?.();
+      setToast(
+        change.action === 'delete' ? 'Fragrance deleted.'
+          : change.action === 'save' && !change.before ? 'Published. It is now in the storefront.'
+          : change.action === 'save' ? 'Product saved. The storefront now uses these details.'
+          : 'Changes saved.',
+      );
+      try { telegram()?.HapticFeedback?.notificationOccurred?.('success'); } catch {}
+      await connect();
+    } catch (e) {
+      setConfirmation(null);
+      setError(e instanceof Error && e.message ? e.message : 'Could not save. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function downloadCustomers() {
+    if (exporting || demo) return;
+    setExporting(true);
+    try {
+      const r = await fetch('/api/admin/report?lang=' + lang, { headers: headers(), signal: AbortSignal.timeout(15000) });
+      if (!r.ok) throw new Error();
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fragranceuz-customers-' + new Date().toISOString().slice(0, 10) + '-' + lang + '.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setError('Could not export customers. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function switchTab(next: Tab) {
+    if (tab === 'settings' && settingsDirty && next !== 'settings') return setToast('Save or cancel your changes first.');
+    setTab(next);
+    setError('');
+    window.scrollTo({ top: 0 });
+  }
+
+  const counts = useMemo(() => ({ visible: products.filter((p) => p.active).length, hidden: products.filter((p) => !p.active).length }), [products]);
+  const q = query.trim().toLowerCase();
+  const list = products.filter(
+    (p) => (visibility === 'all' || p.active === (visibility === 'visible')) && (!q || `${p.name} ${p.brand} ${p.id}`.toLowerCase().includes(q)),
+  );
+  const newOrders = orders.filter((o) => o.status === 'new').length;
+
+  return (
+    <div className="bq ba">
+      <header className="ba-header">
+        <div className="ba-topbar">
+          <a href={demo ? '/?demo=1' : '/'} className="ba-logo" aria-label={t('Back to store')}>
+            <img src="/brand/fragranceuz-gold.svg" alt="FRAGRANCE UZ" width="70" height="55" />
+          </a>
+          <div className="b-top-actions">
+            <button className="b-round" onClick={toggleTheme} aria-label={t(theme === 'dark' ? 'Use light mode' : 'Use dark mode')}>
+              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
+            <LanguageSwitch lang={lang} setLang={setLang} />
+          </div>
+        </div>
+        <h1>{t('Store management')}</h1>
+        <div className="ba-header-meta">
+          {role && (
+            <span className="ba-role">
+              <Check size={14} />
+              {t(role === 'demo' ? 'Demo administrator' : role === 'owner' ? 'Store owner' : 'Store administrator')}
+            </span>
+          )}
+          <a href={demo ? '/?demo=1' : '/'} className="ba-back">
+            {t('Back to store')}
+            <ArrowUpRight size={15} />
+          </a>
+        </div>
+      </header>
+
+      {checking && !role ? (
+        <div className="ba-loading">
+          <BottleMark className="b-empty-mark" />
+        </div>
+      ) : !role ? (
+        <div className="b-empty ba-locked">
+          <LockKeyhole size={40} strokeWidth={1.3} />
+          <h2>{t('Access for owner and admins only')}</h2>
+          <p>{t('Open the store through its Telegram bot using an authorized account.')}</p>
+          <a className="b-btn" href="https://t.me/fragranceuz_bot?startapp" target="_blank" rel="noreferrer">
+            <Send size={17} />
+            {t('Open in Telegram')}
+          </a>
+          <button className="b-text-btn" onClick={() => connect()}>
+            <RefreshCw size={15} />
+            {t('Check access again')}
+          </button>
+          {error && <p className="b-error">{errorText(error, lang)}</p>}
+        </div>
+      ) : (
+        <>
+          <nav className="ba-tabs" aria-label={t('Store management')}>
+            {(
+              [
+                ['products', 'Products', products.length],
+                ['orders', 'Orders', newOrders || null],
+                ['stats', 'Statistics', null],
+                ['customers', 'Customers', customers.length || null],
+                ['settings', 'Store settings', null],
+              ] as [Tab, string, number | null][]
+            ).map(([id, label, count]) => (
+              <button key={id} className={tab === id ? 'on' : ''} onClick={() => switchTab(id)} aria-current={tab === id ? 'page' : undefined}>
+                {t(label)}
+                {count !== null && <small className={id === 'orders' ? 'hot' : ''}>{count}</small>}
+              </button>
+            ))}
+          </nav>
+
+          {demo && <p className="ba-demo-note">{t('Confirmed product and shop changes are saved in this demo. Real orders and customer records are kept separate.')}</p>}
+          {error && <p className="b-error ba-error">{errorText(error, lang)}</p>}
+
+          {tab === 'products' && (
+            <section className="ba-panel">
+              <LinkImport
+                demo={demo}
+                headers={headers}
+                onImported={(product, warnings) => setEditing({ product, before: products.find((p) => p.id === product.id) || null, warnings })}
+                onManual={() => setEditing({ product: blankProduct(), before: null, warnings: [] })}
+              />
+              <div className="ba-list-head">
+                <h2>{t('Catalog')}</h2>
+                <span className="b-count">{list.length}</span>
+              </div>
+              <label className="b-search small">
+                <Search size={17} />
+                <input id="product-search" value={query} onChange={(e) => { setQuery(e.target.value); setShown(PAGE); }} placeholder={t('Find a fragrance…')} aria-label={t('Find a fragrance')} />
+              </label>
+              <div className="b-pills ba-scroll-pills">
+                {([['all', 'All products', products.length], ['visible', 'Shown', counts.visible], ['hidden', 'Hidden', counts.hidden]] as const).map(([id, label, n]) => (
+                  <button key={id} className={visibility === id ? 'on' : ''} onClick={() => { setVisibility(id); setShown(PAGE); }}>
+                    {t(label)} <small>{n}</small>
+                  </button>
+                ))}
+              </div>
+              <div className="ba-products">
+                {list.slice(0, shown).map((p) => {
+                  const v = p.variants[cheapest(p)];
+                  return (
+                    <button
+                      key={p.id}
+                      className={'ba-product ' + (p.active ? '' : 'hidden')}
+                      style={{ '--niche': tints(toneOf(p.id, {}).tone).niche, '--niche-dark': tints(toneOf(p.id, {}).tone).nicheDark } as React.CSSProperties}
+                      onClick={() => setEditing({ product: p, before: p, warnings: [] })}
+                    >
+                      <span className="ba-orb">
+                        <Shot p={p} />
+                      </span>
+                      <span className="ba-product-copy">
+                        <span className="b-house">{p.brand || '—'}</span>
+                        <strong>{displayName(p.name)}</strong>
+                        <small>
+                          {p.variants.length > 1 ? `${p.variants.length} × ` : ''}
+                          {formatBottle(v.label, lang)} · {formatMoney(v.price, lang)}
+                        </small>
+                      </span>
+                      {!p.active && <span className="ba-chip">{t('Hidden')}</span>}
+                      <ChevronRight size={18} className="ba-chevron" />
+                    </button>
+                  );
+                })}
+              </div>
+              {list.length > shown && (
+                <button className="b-btn ghost ba-more" onClick={() => setShown((n) => n + PAGE)}>
+                  {t('Show more fragrances')}
+                </button>
+              )}
+              {!list.length && <div className="b-empty"><p>{t('No fragrances found.')}</p></div>}
+            </section>
+          )}
+
+          {tab === 'orders' && (
+            <OrdersPanel
+              orders={orders}
+              total={statistics?.totalOrders ?? orders.length}
+              busy={busy}
+              changeStatus={(o, status) => ask({ action: 'order-status', id: o.id, status, from: o.status, customer: o.data.customer.name })}
+              retry={(o) => ask({ action: 'retry-notification', id: o.id })}
+            />
+          )}
+          {tab === 'stats' && <StatsPanel statistics={statistics} productCount={counts.visible} hiddenCount={counts.hidden} />}
+          {tab === 'customers' && <CustomersPanel customers={customers} demo={demo} download={downloadCustomers} exporting={exporting} />}
+          {tab === 'settings' && (
+            <SettingsPanel settings={settings} busy={busy} onDirtyChange={setSettingsDirty} save={(next) => ask({ action: 'settings', settings: next, before: settings })} />
+          )}
+        </>
+      )}
+
+      {editing && (
+        <ProductEditor
+          key={editing.product.id + (editing.before ? ':edit' : ':new') + editing.product.importedAt}
+          initial={editing.product}
+          before={editing.before}
+          warnings={editing.warnings}
+          exists={!editing.before && products.some((p) => p.id === editing.product.id)}
+          demo={demo}
+          busy={busy}
+          onClose={() => setEditing(null)}
+          onSave={(product, upload) => ask({ action: 'save', product, before: editing.before, imageUpload: upload }, () => setEditing(null))}
+          onDelete={(product) => ask({ action: 'delete', id: product.id, product }, () => setEditing(null))}
+        />
+      )}
+      {confirmation && <ConfirmSheet change={confirmation.change} busy={busy} confirm={commit} cancel={() => !busy && setConfirmation(null)} />}
+      {toast && (
+        <div className="b-toast" role="status">
+          <Check size={16} />
+          {t(toast)}
+        </div>
+      )}
+    </div>
+  );
 }

@@ -1,4 +1,5 @@
-import {catalog,isAdmin,adminRole,runtime,error,sameOrigin,body,storeSettings} from '../../../lib/server';
+import {catalog,isAdmin,adminRole,runtime,error,sameOrigin,body,storeSettings,ADMIN_BODY_LIMIT} from '../../../lib/server';
+import {saveProduct,deleteProduct} from '../../../lib/product-store';
 import {settingsInput} from '../../../lib/settings';
 import {productInput} from '../../../lib/validation';
 import {sendNotification} from '../../../lib/telegram';
@@ -15,11 +16,15 @@ export async function GET(request:Request){
 export async function POST(request:Request){
  if(!sameOrigin(request))return error('Invalid origin',403);if(!await isAdmin(request))return error('Not authorized',401);const e=runtime();if(!e.DB)return error('Database is not connected',503);
  try{
-  const input=await body(request);if(input.confirmed!==true)return error('Please confirm your changes before saving.',400);
+  const input=await body(request,ADMIN_BODY_LIMIT);if(input.confirmed!==true)return error('Please confirm your changes before saving.',400);
   if(input.action==='settings'){const parsed=settingsInput.safeParse(input.settings);if(!parsed.success)return error('Use a full international phone number and valid Telegram or Instagram profile links.');const settings=parsed.data;await e.DB.prepare('INSERT INTO store_settings (id,data,updated_at) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at').bind('public',JSON.stringify(settings),new Date().toISOString()).run();return Response.json({ok:true});}
   if(input.action==='save'){
    const p=productInput.parse(input.product);const postId=p.sourceUrl.split('/').pop();if(postId!==p.id)return error('Product ID must match the source post.');
-   await e.DB.prepare('INSERT INTO product_overrides (id,data,updated_at) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at').bind(p.id,JSON.stringify(p),new Date().toISOString()).run();return Response.json({ok:true});
+   const saved=await saveProduct(e.DB,'live',p,input.imageUpload);return Response.json({ok:true,product:saved});
+  }
+  if(input.action==='delete'){
+   if(typeof input.id!=='string'||!/^\d{1,16}$/.test(input.id))return error('Invalid product');
+   if(!await deleteProduct(e.DB,'live',input.id))return error('Product not found',404);return Response.json({ok:true});
   }
   if(input.action==='order-status'){
    if(!['new','confirmed','completed','cancelled'].includes(input.status)||typeof input.id!=='string')return error('Invalid status');

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, blob, uniqueIndex } from 'drizzle-orm/sqlite-core';
 export const productOverrides = sqliteTable('product_overrides', {
  id:text('id').primaryKey(), data:text('data').notNull(), updatedAt:text('updated_at').notNull()
 });
@@ -15,4 +15,12 @@ export const demoProductOverrides = sqliteTable('demo_product_overrides', {
 });
 export const demoStoreSettings = sqliteTable('demo_store_settings', {
  id:text('id').primaryKey(),data:text('data').notNull(),updatedAt:text('updated_at').notNull()
+});
+// Photos saved from channel posts or uploaded in the admin, so catalog images never depend on Telegram's CDN links.
+export const productImages = sqliteTable('product_images', {
+ key:text('key').primaryKey(), contentType:text('content_type').notNull(), data:blob('data').notNull(), updatedAt:text('updated_at').notNull()
+});
+// Products deleted in the admin. Seed products cannot be removed from data/products.json, so deletion is recorded here.
+export const productRemovals = sqliteTable('product_removals', {
+ key:text('key').primaryKey(), removedAt:text('removed_at').notNull()
 });

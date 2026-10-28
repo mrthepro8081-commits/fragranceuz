@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';import {createHmac} from 'node:crypto';import fs from 'node:fs';
-const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync(new URL('../drizzle/0000_curved_maginty.sql',import.meta.url),'utf8'));sql.exec(fs.readFileSync(new URL('../drizzle/0001_jittery_ricochet.sql',import.meta.url),'utf8'));
+const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync(new URL('../drizzle/0000_curved_maginty.sql',import.meta.url),'utf8'));sql.exec(fs.readFileSync(new URL('../drizzle/0001_jittery_ricochet.sql',import.meta.url),'utf8'));sql.exec(fs.readFileSync(new URL('../drizzle/0003_product_images_and_removals.sql',import.meta.url),'utf8'));
 const DB={prepare(query){let args=[];return {bind(...v){args=v;return this},async first(){return sql.prepare(query).get(...args)||null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){const r=sql.prepare(query).run(...args);return {meta:{changes:r.changes}}}}}};
 const token='000000:test-only-never-a-real-bot';
 globalThis.__TEST_ENV={DB,TELEGRAM_BOT_TOKEN:token,TELEGRAM_ORDER_CHAT_ID:'test-recipient',OWNER_TELEGRAM_ID:'123456789',ADMIN_TELEGRAM_IDS:'987654321'};

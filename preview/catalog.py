@@ -14,8 +14,8 @@ for p in products:
         p['image'] = 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode()
     else:
         p['image'] = None
-    p.pop('photoSource', None)
-    p.pop('sourceText', None)
+    p['photoSource'] = None
+    p['sourceText'] = ''
 products.sort(key=lambda p: -int(p['id']))
 out = os.path.join(root, 'dist-preview', 'catalog.json')
 json.dump([p for p in products if p.get('active', True)], open(out, 'w'), ensure_ascii=False, separators=(',', ':'))
