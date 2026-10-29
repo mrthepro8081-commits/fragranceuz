@@ -129,8 +129,8 @@ html.b-locked, html.b-locked body { overflow: hidden; }
 
 /* new in the window */
 .b-feature { position: relative; width: min(62vw, 250px); display: flex; flex-direction: column; gap: 3px; text-align: left; }
-.b-feature-no { position: absolute; z-index: 1; top: 16px; left: 0; right: 0; text-align: center; font-family: var(--cond); font-size: 12px; letter-spacing: .2em; color: rgba(42, 18, 21, .42); }
-.b-feature-stage { position: relative; display: flex; align-items: center; justify-content: center; padding: 15% 9% 9%; aspect-ratio: 5 / 6; border-radius: 999px 999px 24px 24px; background: var(--niche); overflow: hidden; margin-bottom: 10px; transition: transform .25s; }
+.b-feature-no { position: absolute; z-index: 1; top: 14px; left: 16px; font-family: var(--cond); font-size: 12px; letter-spacing: .2em; color: rgba(42, 18, 21, .42); }
+.b-feature-stage { position: relative; display: flex; align-items: center; justify-content: center; padding: 11% 8% 8%; aspect-ratio: 5 / 6; border-radius: 24px; background: radial-gradient(70% 55% at 50% 45%, rgba(255, 255, 255, .38), transparent 72%), var(--niche); overflow: hidden; margin-bottom: 10px; transition: transform .25s; }
 .b-feature:active .b-feature-stage { transform: scale(.97); }
 
 .b-feature-name { font-family: var(--serif); font-size: 22px; font-weight: 600; line-height: 1.05; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -180,13 +180,13 @@ html.b-locked, html.b-locked body { overflow: hidden; }
 .b-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 12px; padding: 6px var(--gutter) 0; }
 @media (min-width: 600px) { .b-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .b-card { position: relative; display: flex; flex-direction: column; min-width: 0; animation: b-rise .5s cubic-bezier(.2, .8, .2, 1) both; }
-.b-niche { position: relative; display: flex; align-items: center; justify-content: center; padding: 17% 10% 9%; width: 100%; aspect-ratio: 4 / 5; border-radius: 999px 999px 20px 20px; background: var(--niche); overflow: hidden; transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
+.b-niche { position: relative; display: flex; align-items: center; justify-content: center; padding: 13% 9% 9%; width: 100%; aspect-ratio: 4 / 5; border-radius: 20px; background: radial-gradient(70% 55% at 50% 45%, rgba(255, 255, 255, .38), transparent 72%), var(--niche); overflow: hidden; transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
 .b-niche:active { transform: scale(.97); }
 :root[data-theme=dark] .bq .b-niche, :root[data-theme=dark] .bq .b-feature-stage, :root[data-theme=dark] .bq .b-recent-orb,
-:root[data-theme=dark] .bq .b-mini-niche, :root[data-theme=dark] .bq .b-line-orb { background: var(--niche-dark); }
-.b-badge { position: absolute; z-index: 1; top: 16px; left: 50%; transform: translateX(-50%); padding: 4px 9px; border-radius: 99px; background: #4f0f15; color: #e8cf91; font-family: var(--cond); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
+:root[data-theme=dark] .bq .b-mini-niche, :root[data-theme=dark] .bq .b-line-orb { background: radial-gradient(70% 55% at 50% 45%, rgba(255, 255, 255, .3), transparent 72%), var(--niche-dark); }
+.b-badge { position: absolute; z-index: 1; top: 10px; left: 10px; padding: 4px 9px; border-radius: 99px; background: #4f0f15; color: #e8cf91; font-family: var(--cond); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
 .b-badge.soft { background: rgba(255, 255, 255, .72); color: #2a1215; }
-.b-heart { position: absolute; top: 2px; right: 0; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--b-bg); border: 1px solid var(--b-line); color: var(--b-muted) !important; transition: transform .2s; }
+.b-heart { position: absolute; z-index: 1; top: 8px; right: 8px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .72); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: rgba(42, 18, 21, .62) !important; transition: transform .2s; }
 .b-heart.on { color: #b0202e !important; border-color: transparent; }
 .b-heart.on svg { fill: currentColor; animation: b-beat .35s; }
 .b-card-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 12px 2px 0; text-align: left; }
@@ -279,7 +279,7 @@ html.b-locked, html.b-locked body { overflow: hidden; }
 .b-link-card.gift .b-link-icon { background: #e8cf91; color: #4f0f15; }
 .b-related { margin: 0 -20px; padding-inline: 20px; scroll-padding-inline: 20px; }
 .b-mini { width: 136px; display: flex; flex-direction: column; gap: 2px; text-align: left; }
-.b-mini-niche { position: relative; display: flex; align-items: center; justify-content: center; padding: 16% 10% 9%; aspect-ratio: 4 / 5; margin-bottom: 8px; border-radius: 999px 999px 16px 16px; background: var(--niche); overflow: hidden; }
+.b-mini-niche { position: relative; display: flex; align-items: center; justify-content: center; padding: 11% 9% 8%; aspect-ratio: 4 / 5; margin-bottom: 8px; border-radius: 16px; background: radial-gradient(70% 55% at 50% 45%, rgba(255, 255, 255, .38), transparent 72%), var(--niche); overflow: hidden; }
 
 .b-mini-name { font-family: var(--serif); font-size: 17px; font-weight: 600; line-height: 1.05; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .b-mini-price { font-size: 13px; font-weight: 800; margin-top: 2px; }
