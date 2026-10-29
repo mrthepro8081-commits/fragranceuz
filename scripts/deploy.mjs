@@ -17,16 +17,19 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import readline from 'node:readline/promises';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = new URL('..', import.meta.url);
 const WORKER = process.env.WORKER_NAME || 'fragranceuz';
 const DB_NAME = `${WORKER}-db`;
 const OWNER = process.env.OWNER_TELEGRAM_ID || '740597322';
 const CONFIG = new URL('dist/server/wrangler.deploy.json', ROOT);
+// A file path, not URL.pathname, so the command also works on Windows (C:\...).
+const CONFIG_PATH = fileURLToPath(CONFIG);
 
 function run(args, { input, capture = true } = {}) {
   const result = spawnSync(process.execPath, ['node_modules/wrangler/bin/wrangler.js', ...args], {
-    cwd: ROOT, input, encoding: 'utf8', stdio: capture ? ['pipe', 'pipe', 'pipe'] : ['pipe', 'inherit', 'inherit'], env: { ...process.env, CI: '1' },
+    cwd: fileURLToPath(ROOT), input, encoding: 'utf8', stdio: capture ? ['pipe', 'pipe', 'pipe'] : ['pipe', 'inherit', 'inherit'], env: { ...process.env, CI: '1' },
   });
   if (result.status !== 0) {
     console.error(result.stdout || '', result.stderr || '');
@@ -58,7 +61,7 @@ const bot = await telegram(token, 'getMe');
 console.log(`Bot: @${bot.username}`);
 
 step('Building');
-const build = spawnSync(process.execPath, ['scripts/run-framework.mjs', 'build'], { cwd: ROOT, stdio: 'inherit' });
+const build = spawnSync(process.execPath, ['scripts/run-framework.mjs', 'build'], { cwd: fileURLToPath(ROOT), stdio: 'inherit' });
 if (build.status !== 0) throw new Error('Build failed');
 
 step(`Database ${DB_NAME}`);
@@ -88,16 +91,16 @@ const config = {
 fs.writeFileSync(CONFIG, JSON.stringify(config, null, 2));
 
 step('Applying database migrations');
-run(['d1', 'migrations', 'apply', 'DB', '--remote', '--config', CONFIG.pathname], { input: 'y\n', capture: false });
+run(['d1', 'migrations', 'apply', 'DB', '--remote', '--config', CONFIG_PATH], { input: 'y\n', capture: false });
 
 step('Deploying');
-const output = run(['deploy', '--config', CONFIG.pathname]);
+const output = run(['deploy', '--config', CONFIG_PATH]);
 const url = output.match(/https:\/\/[\w.-]+\.workers\.dev/)?.[0];
 console.log(output.split('\n').filter((l) => /workers\.dev|Uploaded|Deployed/.test(l)).join('\n'));
 if (!url) throw new Error('Deployed, but the workers.dev address was not found in the output. Enable workers.dev for the Worker in the Cloudflare dashboard and run again.');
 
 step('Saving the bot token as a Worker secret');
-run(['secret', 'put', 'TELEGRAM_BOT_TOKEN', '--config', CONFIG.pathname], { input: token });
+run(['secret', 'put', 'TELEGRAM_BOT_TOKEN', '--config', CONFIG_PATH], { input: token });
 
 step('Connecting the Telegram bot');
 const secret = createHash('sha256').update('fragranceuz-webhook:' + token).digest('hex').slice(0, 48);
