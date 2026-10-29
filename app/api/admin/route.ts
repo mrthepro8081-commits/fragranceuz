@@ -1,6 +1,7 @@
 import {catalog,isAdmin,adminRole,runtime,error,sameOrigin,body,storeSettings,ADMIN_BODY_LIMIT} from '../../../lib/server';
 import {saveProduct,deleteProduct} from '../../../lib/product-store';
 import {setOrderStatus} from '../../../lib/order-status';
+import {sheetsLink,saveSheetsLink,testSheet,pushAllOrders,SHEETS_LINK} from '../../../lib/sheets';
 import {sendOrderAlert} from '../../../lib/order-notify';
 import {settingsInput} from '../../../lib/settings';
 import {productInput} from '../../../lib/validation';
@@ -13,7 +14,7 @@ export async function GET(request:Request){
  const e=runtime();if(!e.DB)return error('Database is not connected',503);
  const orders=await e.DB.prepare('SELECT id,data,total,status,notification,created_at FROM orders ORDER BY created_at DESC LIMIT 100').all();
  const [statistics,customers]=await Promise.all([storeStats(e.DB),customerRecords(e.DB)]);
- return Response.json({settings:await storeSettings(),statistics,customers,role,products:await catalog(true),orders:orders.results.map(r=>({...r,data:JSON.parse(String(r.data))})),telegramReady:!!(e.TELEGRAM_BOT_TOKEN&&e.TELEGRAM_ORDER_CHAT_ID)},{headers:{'Cache-Control':'no-store'}});
+ return Response.json({settings:await storeSettings(),statistics,customers,role,products:await catalog(true),orders:orders.results.map(r=>({...r,data:JSON.parse(String(r.data))})),telegramReady:!!(e.TELEGRAM_BOT_TOKEN&&e.TELEGRAM_ORDER_CHAT_ID),sheets:await sheetsLink(e.DB).then(link=>({connected:!!link,hint:link?link.replace(/^https:\/\/script\.google\.com\/macros\/s\/([\w-]{6})[\w-]*\/exec\?key=.*$/,'script.google.com/…/$1…'):null}))},{headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(request:Request){
  if(!sameOrigin(request))return error('Invalid origin',403);if(!await isAdmin(request))return error('Not authorized',401);const e=runtime();if(!e.DB)return error('Database is not connected',503);
@@ -27,6 +28,16 @@ export async function POST(request:Request){
   if(input.action==='delete'){
    if(typeof input.id!=='string'||!/^\d{1,16}$/.test(input.id))return error('Invalid product');
    if(!await deleteProduct(e.DB,'live',input.id))return error('Product not found',404);return Response.json({ok:true});
+  }
+  if(input.action==='sheets-save'){
+   const link=input.link===null?null:String(input.link||'').trim();
+   if(link!==null&&!SHEETS_LINK.test(link))return error('Paste the link shown by the sheet menu Fragrance UZ → Show the link for the shop.');
+   if(link)try{await testSheet(link)}catch{return error('Google Sheets did not answer. Check that the script is deployed as a web app with access for anyone.',502)}
+   await saveSheetsLink(e.DB,link);return Response.json({ok:true});
+  }
+  if(input.action==='sheets-sync'){
+   const link=await sheetsLink(e.DB);if(!link)return error('Connect the Google Sheet first.');
+   try{return Response.json({ok:true,...await pushAllOrders(e.DB,link)})}catch{return error('Google Sheets did not answer. Check that the script is deployed as a web app with access for anyone.',502)}
   }
   if(input.action==='order-status'){
    const result=await setOrderStatus(e,input.id,input.status,new URL(request.url).origin);

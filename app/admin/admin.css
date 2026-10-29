@@ -262,6 +262,20 @@
 .ba-customers p { font-size: 13px; color: var(--b-muted); margin: 2px 0 6px !important; }
 .ba-customers small { font-size: 12px; color: var(--b-muted); }
 
+/* google sheet */
+.ba-sheets { padding: 18px; border-radius: 22px; background: var(--b-card); border: 1px solid var(--b-line); display: flex; flex-direction: column; gap: 12px; }
+.ba-sheets > header { display: flex; align-items: center; gap: 12px; }
+.ba-sheets > header > div { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.ba-sheets h3 { font-size: 22px; line-height: 1.1; }
+.ba-sheets-icon { width: 46px; height: 46px; flex: none; border-radius: 14px; display: grid; place-items: center; background: #1e8e3e; color: #fff; }
+.ba-sheets .b-fine { margin: 0; }
+.ba-sheets > .b-buy { flex: none; }
+.ba-sheets-link { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--b-muted); overflow-wrap: anywhere; }
+.ba-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; line-height: 1.45; }
+.ba-steps li::marker { font-weight: 800; color: var(--b-gold-ink); }
+.ba-steps .b-text-btn { display: flex; padding: 4px 0 0; }
+.ba-script { width: 100%; height: 140px; margin-top: 6px; padding: 10px; border-radius: 12px; border: 1px solid var(--b-line); background: var(--b-bg); color: var(--b-ink); font: 11px/1.4 ui-monospace, monospace; }
+
 /* settings */
 .ba-form-actions { display: flex; gap: 8px; margin-top: 10px; }
 .ba-form-actions .b-buy { height: 54px; }

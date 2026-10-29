@@ -47,6 +47,10 @@ After the first deploy, press **Start** in the bot from the owner account — Te
 - A new request arrives in the owner chat with the customer's name, phone, Telegram, address, items and total, and buttons **✅ Подтвердить / ❌ Отменить** plus **💬 Написать клиенту**.
 - Approving (in the chat or in the admin) sends the owner a "Заказ подтверждён" card with the contacts for delivery and messages the customer in their language. Completing or cancelling also tells the customer.
 
+## Client database in Google Sheets
+
+Admin → Settings → «Google Таблица клиентов» connects a sheet on the owner's Google account; every request and client is then written there automatically (tabs «Заявки» and «Клиенты»), and «Выгрузить всех клиентов» uploads earlier ones. Setup steps and details: `google-sheets/README.md`; the script is `google-sheets/Code.gs`.
+
 ## Statistics
 
 The Statistics tab (7 / 30 / 90 days): requested value with change vs the previous period, requests, average order, completed value, new customers, requests per day (chart or table), status split, view → bag → order funnel, best-selling fragrances, top houses and most-viewed products. Views and bag additions are anonymous daily counters (`product_events`, migration 0004).

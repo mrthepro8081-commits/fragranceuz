@@ -1,6 +1,7 @@
 import {catalog,runtime,error,sameOrigin,body} from '../../../lib/server';
 import {verifyTelegram} from '../../../lib/telegram';
 import {sendOrderAlert} from '../../../lib/order-notify';
+import {pushOrder} from '../../../lib/sheets';
 import {orderInput} from '../../../lib/validation';
 import {translate,formatProductName,formatMoney,formatBottle} from '../../../lib/i18n';
 import type {OrderData} from '../../../lib/types';
@@ -16,10 +17,12 @@ export async function POST(request:Request){
  const products=await catalog();const seen=new Set();const items=[];
  for(const row of input.items){const key=`${row.id}:${row.variant}`;if(seen.has(key))return error('Duplicate cart item');seen.add(key);const p=products.find(x=>x.id===row.id);const v=p?.variants[row.variant];if(!p||!v||(row.expectedLabel!==undefined&&row.expectedLabel!==v.label))return error('A fragrance in your cart has changed. Please refresh the catalog.',409);items.push({id:p.id,name:p.name,brand:p.brand,label:v.label,price:v.price,quantity:row.quantity,sourceUrl:p.sourceUrl});}
  const total=items.reduce((s,p)=>s+p.price*p.quantity,0);if(total!==input.quotedTotal)return error('Prices have changed. Please review your updated bag and send the request again.',409);const id=crypto.randomUUID();const data:OrderData={language:input.language,customer:input.customer,items,telegram:{id:user.id,username:user.username},total};
- const result=await e.DB.prepare('INSERT OR IGNORE INTO orders (id,user_id,request_key,data,total,status,notification,created_at) VALUES (?,?,?,?,?,?,?,?)').bind(id,String(user.id),input.requestKey,JSON.stringify(data),total,'new','pending',new Date().toISOString()).run();
+ const createdAt=new Date().toISOString();
+ const result=await e.DB.prepare('INSERT OR IGNORE INTO orders (id,user_id,request_key,data,total,status,notification,created_at) VALUES (?,?,?,?,?,?,?,?)').bind(id,String(user.id),input.requestKey,JSON.stringify(data),total,'new','pending',createdAt).run();
  if(!result.meta.changes){const duplicate=await e.DB.prepare('SELECT id,notification FROM orders WHERE user_id=? AND request_key=?').bind(String(user.id),input.requestKey).first();return Response.json({orderId:duplicate?.id,notification:duplicate?.notification});}
  let notification='sent';
  try{await sendOrderAlert(e,id,data,new URL(request.url).origin);}catch{notification='failed';}
+ await pushOrder(e.DB,{id,createdAt,status:'new',data});
  await e.DB.prepare('UPDATE orders SET notification=? WHERE id=?').bind(notification,id).run();
  return Response.json({orderId:id,notification},{status:201});
 }

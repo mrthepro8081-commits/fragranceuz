@@ -13,7 +13,9 @@ export type AdminChange =
   | { action: 'delete'; id: string; product: Product }
   | { action: 'settings'; settings: StoreSettings; before: StoreSettings }
   | { action: 'order-status'; id: string; status: string; from: string; customer: string }
-  | { action: 'retry-notification'; id: string };
+  | { action: 'retry-notification'; id: string }
+  | { action: 'sheets-save'; link: string | null }
+  | { action: 'sheets-sync'; orders: number };
 
 type Line = { label: string; from?: string; to: string };
 
@@ -80,6 +82,13 @@ export function ConfirmSheet({ change, busy, confirm, cancel }: { change: AdminC
   } else if (change.action === 'order-status') {
     title = t('Change order status?');
     lines = [{ label: change.customer + ' · #' + change.id.slice(0, 8), from: t('status.' + change.from), to: t('status.' + change.status) }];
+  } else if (change.action === 'sheets-save') {
+    title = t(change.link ? 'Connect the Google Sheet?' : 'Disconnect the Google Sheet?');
+    note = t(change.link ? 'Every new request and status change will be written to the sheet. We check the link before saving.' : 'New requests will no longer be written to the sheet. Rows already there stay.');
+  } else if (change.action === 'sheets-sync') {
+    title = t('Upload all clients to the sheet?');
+    lines = [{ label: t('Order requests'), to: String(change.orders) }];
+    note = t('The sheet is refreshed from the shop database; nothing is deleted from your other tabs.');
   } else {
     title = t('Retry Telegram alert');
     note = '#' + change.id.slice(0, 8);

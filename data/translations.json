@@ -2094,5 +2094,117 @@
   "Order not found": [
     "Заявка не найдена.",
     "So‘rov topilmadi."
+  ],
+  "Google Sheet of clients": [
+    "Google Таблица клиентов",
+    "Mijozlar Google jadvali"
+  ],
+  "Connected": [
+    "Подключена",
+    "Ulangan"
+  ],
+  "Not connected": [
+    "Не подключена",
+    "Ulanmagan"
+  ],
+  "Every client and order request is written to your own Google Sheet: a «Клиенты» tab with contacts and totals and a «Заявки» tab with every request.": [
+    "Каждый клиент и каждая заявка записываются в вашу Google Таблицу: вкладка «Клиенты» — контакты и суммы, вкладка «Заявки» — все заявки.",
+    "Har bir mijoz va so‘rov Google jadvalingizga yoziladi: «Клиенты» varag‘ida kontaktlar va summalar, «Заявки» varag‘ida barcha so‘rovlar."
+  ],
+  "Available after launch: the demo does not send real client data anywhere.": [
+    "Доступно после запуска: демоверсия никуда не отправляет данные клиентов.",
+    "Ishga tushirilgandan keyin mavjud: demo mijozlar ma’lumotlarini hech qayerga yubormaydi."
+  ],
+  "Upload all clients": [
+    "Выгрузить всех клиентов",
+    "Barcha mijozlarni yuklash"
+  ],
+  "Disconnect": [
+    "Отключить",
+    "Uzish"
+  ],
+  "Open a new Google Sheet on your account and name it, e.g. «Fragrance UZ — клиенты».": [
+    "Создайте новую Google Таблицу в своём аккаунте и назовите её, например, «Fragrance UZ — клиенты».",
+    "Hisobingizda yangi Google jadval yarating va nom bering, masalan «Fragrance UZ — клиенты»."
+  ],
+  "In the sheet: Extensions → Apps Script. Delete what is there and paste the script.": [
+    "В таблице: Расширения → Apps Script. Удалите то, что там написано, и вставьте скрипт.",
+    "Jadvalda: Kengaytmalar (Extensions) → Apps Script. U yerdagi matnni o‘chirib, skriptni joylashtiring."
+  ],
+  "Script copied": [
+    "Скрипт скопирован",
+    "Skript nusxalandi"
+  ],
+  "Copy the script": [
+    "Скопировать скрипт",
+    "Skriptni nusxalash"
+  ],
+  "Save, reload the sheet, then menu Fragrance UZ → «1. Подготовить таблицу» and allow access.": [
+    "Сохраните, обновите страницу таблицы, затем меню Fragrance UZ → «1. Подготовить таблицу» и разрешите доступ.",
+    "Saqlang, jadval sahifasini yangilang, so‘ng Fragrance UZ menyusi → «1. Подготовить таблицу» va ruxsat bering."
+  ],
+  "Deploy → New deployment → Web app. Execute as: Me. Who has access: Anyone. Deploy.": [
+    "Начать развёртывание → Новое развёртывание → Веб-приложение. Запуск от имени: «Я», доступ: «Все». Нажмите «Начать развёртывание».",
+    "Deploy → New deployment → Web app. Execute as: «Me», Who has access: «Anyone». Deploy tugmasini bosing."
+  ],
+  "Menu Fragrance UZ → «2. Показать ссылку для магазина», copy the link and paste it below.": [
+    "Меню Fragrance UZ → «2. Показать ссылку для магазина», скопируйте ссылку и вставьте ниже.",
+    "Fragrance UZ menyusi → «2. Показать ссылку для магазина», havolani nusxalab, pastga joylashtiring."
+  ],
+  "Link for the shop": [
+    "Ссылка для магазина",
+    "Do‘kon uchun havola"
+  ],
+  "Connect": [
+    "Подключить",
+    "Ulash"
+  ],
+  "Connect the Google Sheet?": [
+    "Подключить Google Таблицу?",
+    "Google jadval ulansinmi?"
+  ],
+  "Disconnect the Google Sheet?": [
+    "Отключить Google Таблицу?",
+    "Google jadval uzilsinmi?"
+  ],
+  "Every new request and status change will be written to the sheet. We check the link before saving.": [
+    "Каждая новая заявка и смена статуса будут записываться в таблицу. Перед сохранением проверим ссылку.",
+    "Har bir yangi so‘rov va holat o‘zgarishi jadvalga yoziladi. Saqlashdan oldin havolani tekshiramiz."
+  ],
+  "New requests will no longer be written to the sheet. Rows already there stay.": [
+    "Новые заявки больше не будут записываться. Уже записанные строки останутся.",
+    "Yangi so‘rovlar endi yozilmaydi. Mavjud qatorlar saqlanib qoladi."
+  ],
+  "Upload all clients to the sheet?": [
+    "Выгрузить всех клиентов в таблицу?",
+    "Barcha mijozlar jadvalga yuklansinmi?"
+  ],
+  "The sheet is refreshed from the shop database; nothing is deleted from your other tabs.": [
+    "Таблица обновится по базе магазина; другие ваши вкладки не изменятся.",
+    "Jadval do‘kon bazasi asosida yangilanadi; boshqa varaqlaringiz o‘zgarmaydi."
+  ],
+  "Google Sheet connected.": [
+    "Google Таблица подключена.",
+    "Google jadval ulandi."
+  ],
+  "Google Sheet disconnected.": [
+    "Google Таблица отключена.",
+    "Google jadval uzildi."
+  ],
+  "Uploaded to the sheet": [
+    "Выгружено в таблицу",
+    "Jadvalga yuklandi"
+  ],
+  "Paste the link shown by the sheet menu Fragrance UZ → Show the link for the shop.": [
+    "Вставьте ссылку из меню таблицы Fragrance UZ → «Показать ссылку для магазина».",
+    "Jadval menyusidagi Fragrance UZ → «Показать ссылку для магазина» havolasini joylashtiring."
+  ],
+  "Google Sheets did not answer. Check that the script is deployed as a web app with access for anyone.": [
+    "Google Таблица не ответила. Проверьте, что скрипт развёрнут как веб-приложение с доступом «Все».",
+    "Google jadval javob bermadi. Skript «Anyone» ruxsati bilan Web app sifatida joylashtirilganini tekshiring."
+  ],
+  "Connect the Google Sheet first.": [
+    "Сначала подключите Google Таблицу.",
+    "Avval Google jadvalni ulang."
   ]
 }

@@ -14,6 +14,7 @@ import { ConfirmSheet, type AdminChange } from './confirm';
 import { LinkImport, ProductEditor, blankProduct } from './editor';
 import { CustomersPanel, OrdersPanel, SettingsPanel, type Order } from './panels';
 import { StatsPanel } from './stats';
+import { SheetsCard } from './sheets';
 
 type Role = 'owner' | 'admin' | 'demo';
 type Editing = { product: Product; before: Product | null; warnings: string[] };
@@ -33,6 +34,7 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
   const [statistics, setStatistics] = useState<StoreStats | null>(null);
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [settings, setSettings] = useState<StoreSettings>(defaultSettings);
+  const [sheets, setSheets] = useState<{ connected: boolean; hint: string | null }>({ connected: false, hint: null });
   const [tab, setTab] = useState<Tab>('products');
   const [query, setQuery] = useState('');
   const [visibility, setVisibility] = useState<'all' | 'visible' | 'hidden'>('all');
@@ -61,7 +63,7 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
         return;
       }
       const d = (await r.json()) as {
-        error?: string; role: Role; products: Product[]; orders: Order[]; statistics: StoreStats; customers: CustomerRecord[]; settings: StoreSettings;
+        error?: string; role: Role; products: Product[]; orders: Order[]; statistics: StoreStats; customers: CustomerRecord[]; settings: StoreSettings; sheets?: { connected: boolean; hint: string | null };
       };
       if (!r.ok) throw new Error(d.error);
       setRole(d.role);
@@ -70,6 +72,7 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
       setStatistics(d.statistics);
       setCustomers(d.customers);
       setSettings(d.settings);
+      setSheets(d.sheets || { connected: false, hint: null });
       if (openTarget) {
         const wanted = new URLSearchParams(location.search).get('tab');
         if (wanted === 'orders' || wanted === 'stats' || wanted === 'customers' || wanted === 'settings') setTab(wanted);
@@ -144,11 +147,13 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
         : change.action === 'delete' ? { action: 'delete', id: change.id }
         : change.action === 'settings' ? { action: 'settings', settings: change.settings }
         : change.action === 'order-status' ? { action: 'order-status', id: change.id, status: change.status }
+        : change.action === 'sheets-save' ? { action: 'sheets-save', link: change.link }
+        : change.action === 'sheets-sync' ? { action: 'sheets-sync' }
         : { action: 'retry-notification', id: change.id };
       const r = await fetch(demo ? '/api/demo' : '/api/admin', {
         method: 'POST', headers: headers(), body: JSON.stringify({ ...payload, confirmed: true }), signal: AbortSignal.timeout(30000),
       });
-      const d = (await r.json()) as { error?: string };
+      const d = (await r.json()) as { error?: string; sent?: number };
       if (!r.ok) {
         if (r.status === 401) setRole(null);
         throw new Error(d.error);
@@ -159,6 +164,8 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
         change.action === 'delete' ? 'Fragrance deleted.'
           : change.action === 'save' && !change.before ? 'Published. It is now in the storefront.'
           : change.action === 'save' ? 'Product saved. The storefront now uses these details.'
+          : change.action === 'sheets-save' ? (change.link ? 'Google Sheet connected.' : 'Google Sheet disconnected.')
+          : change.action === 'sheets-sync' ? `${t('Uploaded to the sheet')}: ${d.sent ?? 0}`
           : 'Changes saved.',
       );
       try { telegram()?.HapticFeedback?.notificationOccurred?.('success'); } catch {}
@@ -346,6 +353,9 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
           )}
           {tab === 'stats' && <StatsPanel demo={demo} headers={headers} products={products} ordersTotal={statistics?.totalOrders ?? 0} />}
           {tab === 'customers' && <CustomersPanel customers={customers} demo={demo} download={downloadCustomers} exporting={exporting} />}
+          {tab === 'settings' && (
+            <SheetsCard demo={demo} busy={busy} sheets={sheets} ask={ask} orders={statistics?.totalOrders ?? 0} />
+          )}
           {tab === 'settings' && (
             <SettingsPanel settings={settings} busy={busy} onDirtyChange={setSettingsDirty} save={(next) => ask({ action: 'settings', settings: next, before: settings })} />
           )}
