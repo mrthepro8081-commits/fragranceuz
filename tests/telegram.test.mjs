@@ -59,3 +59,15 @@ test('Statistics count real orders and anonymous views, and only for staff',asyn
  assert.equal(s.topProducts[0].id,'11078');assert.deepEqual(s.funnel,{views:2,adds:1,ordered:1});assert.equal(s.topViewed.length,1);
  assert.equal(s.daily.reduce((n,d)=>n+d.requests,0),1);
 });
+test('Every admin gets the new-order alert and the customer gets an "order accepted" summary with their details',async()=>{
+ globalThis.__TEST_ENV.ADMIN_TELEGRAM_IDS='111,222, 740597322';calls.length=0;
+ try{
+  const r=await ORDER(new Request('https://shop.example/api/orders',{method:'POST',headers:{'Content-Type':'application/json','x-telegram-init-data':init(7771,'dilnoza')},body:JSON.stringify({requestKey:crypto.randomUUID(),language:'ru',quotedTotal:3120000,customer:{name:'Dilnoza',phone:'+998935550000',address:'Ташкент, Чиланзар 9',note:'Позвоните после 18:00'},items:[{id:'11078',variant:0,quantity:1}]})}));
+  assert.equal(r.status,201);
+  const alerts=calls.filter(c=>c.method==='sendMessage'&&/Новая заявка/.test(c.body.text));
+  assert.deepEqual(alerts.map(a=>a.body.chat_id).sort(),['111','222',OWNER].sort());
+  assert.ok(alerts.every(a=>/\+998935550000/.test(a.body.text)&&/Чиланзар/.test(a.body.text)));
+  const mine=calls.find(c=>c.method==='sendMessage'&&c.body.chat_id===7771);
+  assert.match(mine.body.text,/принята/);assert.match(mine.body.text,/Dilnoza/);assert.match(mine.body.text,/\+998935550000/);assert.match(mine.body.text,/Чиланзар/);assert.match(mine.body.text,/после 18:00/);
+ }finally{delete globalThis.__TEST_ENV.ADMIN_TELEGRAM_IDS}
+});

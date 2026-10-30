@@ -50,16 +50,30 @@ export function orderAlertText(id: string, d: OrderData, status = 'new') {
   return `${title}\n\n${orderBody(d)}\n\n<i>${ru('This is an order request. Availability, final price, delivery, and payment are arranged with the store.')}</i>`.slice(0, 4000);
 }
 
-/** New order: alert the owner's chat with action buttons. */
+/** Who receives order alerts: the order chat (the owner by default) and every listed admin, once each. */
+export function alertRecipients(env: RuntimeEnv) {
+  const ids = [env.TELEGRAM_ORDER_CHAT_ID, ...(env.ADMIN_TELEGRAM_IDS || '').split(',')].map((s) => (s || '').trim()).filter(Boolean);
+  return [...new Set(ids)];
+}
+
+/** Sends one message to every recipient; succeeds if at least one got it. */
+async function toStaff(env: RuntimeEnv, text: string, extra: (chatId: string) => Record<string, unknown>) {
+  const recipients = alertRecipients(env);
+  if (!env.TELEGRAM_BOT_TOKEN || !recipients.length) throw new Error('Telegram is not connected');
+  const results = await Promise.allSettled(recipients.map((chatId) => sendNotification(env.TELEGRAM_BOT_TOKEN!, chatId, text, extra(chatId))));
+  if (!results.some((r) => r.status === 'fulfilled')) throw new Error('Telegram delivery failed');
+}
+
+/** New order: alert the owner and admins with the customer's contacts and action buttons. */
 export async function sendOrderAlert(env: RuntimeEnv, id: string, d: OrderData, origin?: string) {
-  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_ORDER_CHAT_ID) throw new Error('Telegram is not connected');
-  await sendNotification(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_ORDER_CHAT_ID, orderAlertText(id, d), {
-    parse_mode: 'HTML',
-    reply_markup: orderKeyboard(id, 'new', d, origin, env.TELEGRAM_ORDER_CHAT_ID),
-  });
+  await toStaff(env, orderAlertText(id, d), (chatId) => ({ parse_mode: 'HTML', reply_markup: orderKeyboard(id, 'new', d, origin, chatId) }));
 }
 
 const CUSTOMER_TEXT: Record<string, Record<'ru' | 'uz', string>> = {
+  new: {
+    ru: '🛍 <b>Заявка {ref} принята!</b>\n\nСпасибо за заказ. Менеджер проверит наличие и свяжется с вами, чтобы согласовать доставку.\n\n{items}\n\n<b>Итого: {total}</b>\n\n<b>Ваши данные</b>\n{contact}',
+    uz: '🛍 <b>{ref} so‘rovingiz qabul qilindi!</b>\n\nBuyurtmangiz uchun rahmat. Menejer mavjudligini tekshirib, yetkazib berishni kelishish uchun siz bilan bog‘lanadi.\n\n{items}\n\n<b>Jami: {total}</b>\n\n<b>Ma’lumotlaringiz</b>\n{contact}',
+  },
   confirmed: {
     ru: '✅ <b>Ваш заказ {ref} подтверждён!</b>\n\nМы свяжемся с вами, чтобы согласовать время доставки.\n\n{items}\n\n<b>Итого: {total}</b>',
     uz: '✅ <b>{ref} buyurtmangiz tasdiqlandi!</b>\n\nYetkazib berish vaqtini kelishish uchun siz bilan bog‘lanamiz.\n\n{items}\n\n<b>Jami: {total}</b>',
@@ -83,24 +97,35 @@ export async function notifyStatusChange(env: RuntimeEnv, id: string, d: OrderDa
   const token = env.TELEGRAM_BOT_TOKEN;
   if (!token) return { owner: false, customer: false };
   let owner = false, customer = false;
-  if (status === 'confirmed' && env.TELEGRAM_ORDER_CHAT_ID) {
+  if (status === 'confirmed') {
     try {
-      await sendNotification(token, env.TELEGRAM_ORDER_CHAT_ID, `✅ <b>Заказ ${ref(id)} подтверждён</b>\nКонтакты клиента для доставки:\n\n${orderBody(d)}`.slice(0, 4000), {
+      await toStaff(env, `✅ <b>Заказ ${ref(id)} подтверждён</b>\nКонтакты клиента для доставки:\n\n${orderBody(d)}`.slice(0, 4000), (chatId) => ({
         parse_mode: 'HTML',
-        reply_markup: orderKeyboard(id, 'confirmed', d, origin, env.TELEGRAM_ORDER_CHAT_ID),
-      });
+        reply_markup: orderKeyboard(id, 'confirmed', d, origin, chatId),
+      }));
       owner = true;
     } catch {}
   }
-  const template = CUSTOMER_TEXT[status]?.[d.language || 'ru'];
-  if (template && d.telegram.id) {
-    const lang = d.language || 'ru';
-    const items = d.items.map((i) => `• ${esc(i.brand)} — ${esc(formatProductName(i.name, lang))} · ${esc(formatBottle(i.label, lang))} × ${i.quantity}`).join('\n');
-    const text = template.replace('{ref}', ref(id)).replace('{items}', items).replace('{total}', esc(formatMoney(d.total, lang)));
-    try {
-      await tgCall(token, 'sendMessage', { chat_id: d.telegram.id, text, parse_mode: 'HTML' });
-      customer = true;
-    } catch {}
-  }
+  customer = await messageCustomer(env, id, d, status);
   return { owner, customer };
+}
+
+/**
+ * Tells the customer about their order in their language (new, confirmed, completed, cancelled).
+ * Best effort: Telegram only delivers if the customer has opened the bot chat.
+ */
+export async function messageCustomer(env: RuntimeEnv, id: string, d: OrderData, status: string) {
+  const lang = d.language || 'ru';
+  const template = CUSTOMER_TEXT[status]?.[lang];
+  if (!env.TELEGRAM_BOT_TOKEN || !template || !d.telegram?.id) return false;
+  const items = d.items.map((i) => `• ${esc(i.brand)} — ${esc(formatProductName(i.name, lang))} · ${esc(formatBottle(i.label, lang))} × ${i.quantity}`).join('\n');
+  const c = d.customer;
+  const contact = [`👤 ${esc(c.name)}`, `📞 ${esc(c.phone)}`, `📍 ${esc(c.address)}`, c.note ? `📝 ${esc(c.note)}` : ''].filter(Boolean).join('\n');
+  const text = template.replace('{ref}', ref(id)).replace('{items}', items).replace('{total}', esc(formatMoney(d.total, lang))).replace('{contact}', contact);
+  try {
+    await tgCall(env.TELEGRAM_BOT_TOKEN, 'sendMessage', { chat_id: d.telegram.id, text: text.slice(0, 4000), parse_mode: 'HTML' });
+    return true;
+  } catch {
+    return false;
+  }
 }

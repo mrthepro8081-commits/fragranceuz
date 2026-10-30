@@ -4,7 +4,7 @@ import type {Product} from './types';
 import {verifyTelegram} from './telegram';
 import {defaultSettings,settingsInput,type StoreSettings} from './settings';
 import {removedIds} from './product-store';
-export type RuntimeEnv={DB?:D1Database;TELEGRAM_BOT_TOKEN?:string;TELEGRAM_ORDER_CHAT_ID?:string;TELEGRAM_BOT_USERNAME?:string;ADMIN_TELEGRAM_IDS?:string;OWNER_TELEGRAM_ID?:string};
+export type RuntimeEnv={DB?:D1Database;TELEGRAM_BOT_TOKEN?:string;TELEGRAM_ORDER_CHAT_ID?:string;TELEGRAM_BOT_USERNAME?:string;ADMIN_TELEGRAM_IDS?:string;OWNER_TELEGRAM_ID?:string;GOOGLE_SHEET_URL?:string};
 export function runtime(){return env as RuntimeEnv;}
 export async function catalog(includeHidden=false):Promise<Product[]>{
  const db=runtime().DB;if(!db)throw new Error('Product database is not connected');

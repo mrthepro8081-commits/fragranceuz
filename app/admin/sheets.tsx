@@ -9,7 +9,7 @@ import type { AdminChange } from './confirm';
 export function SheetsCard({ demo, busy, sheets, ask, orders }: {
   demo: boolean;
   busy: boolean;
-  sheets: { connected: boolean; hint: string | null };
+  sheets: { connected: boolean; hint: string | null; doc?: string | null };
   ask: (change: AdminChange) => void;
   orders: number;
 }) {
@@ -56,10 +56,17 @@ export function SheetsCard({ demo, busy, sheets, ask, orders }: {
         ) : (
           <>
             <ol className="ba-steps">
-              <li>
-                {t('Open a new Google Sheet on your account and name it, e.g. «Fragrance UZ — клиенты».')}
-                <a className="b-text-btn" href="https://sheets.new" target="_blank" rel="noreferrer"><ExternalLink size={14} />sheets.new</a>
-              </li>
+              {sheets.doc ? (
+                <li>
+                  {t('Open your client sheet on a computer or in the browser (desktop version).')}
+                  <a className="b-text-btn" href={sheets.doc} target="_blank" rel="noreferrer"><ExternalLink size={14} />{t('Open the sheet')}</a>
+                </li>
+              ) : (
+                <li>
+                  {t('Open a new Google Sheet on your account and name it, e.g. «Fragrance UZ — клиенты».')}
+                  <a className="b-text-btn" href="https://sheets.new" target="_blank" rel="noreferrer"><ExternalLink size={14} />sheets.new</a>
+                </li>
+              )}
               <li>
                 {t('In the sheet: Extensions → Apps Script. Delete what is there and paste the script.')}
                 <button className="b-text-btn" onClick={copyScript}>{copied ? <Check size={14} /> : <Copy size={14} />}{t(copied ? 'Script copied' : 'Copy the script')}</button>

@@ -337,6 +337,25 @@ html.b-locked, html.b-locked body { overflow: hidden; }
 .b-ref { font-family: var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--b-gold-ink); font-size: 13px; }
 .b-success p:not(.b-ref) { color: var(--b-muted); font-size: 14.5px; line-height: 1.55; margin-bottom: 10px; }
 .b-success .b-btn { width: 100%; }
+.b-receipt { width: 100%; margin-top: 4px; padding: 16px; border-radius: 22px; background: var(--b-card); border: 1px solid var(--b-line); text-align: left; }
+.b-receipt h4 { margin: 0 0 10px; font-family: var(--cond); font-weight: 500; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--b-muted); }
+.b-receipt ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.b-receipt ul li { display: flex; align-items: center; gap: 12px; }
+.b-line-orb.small { width: 54px; height: 54px; }
+.b-receipt-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.b-receipt-copy strong { font-family: var(--serif); font-size: 17px; font-weight: 600; line-height: 1.1; }
+.b-receipt-copy small { font-size: 12.5px; color: var(--b-muted); }
+.b-receipt-price { font-size: 14px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.b-receipt-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--b-line); }
+.b-receipt-total span { color: var(--b-muted); font-weight: 600; font-size: 14px; }
+.b-receipt-total strong { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.b-success .b-receipt p { margin: 8px 0 0; font-size: 13px; }
+.b-success .b-receipt-delivery { display: flex; align-items: center; gap: 8px; color: var(--b-gold-ink) !important; font-weight: 600; }
+.b-receipt dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; }
+.b-receipt dt { font-size: 12.5px; color: var(--b-muted); font-weight: 600; }
+.b-receipt dd { margin: 0; font-size: 14.5px; font-weight: 700; overflow-wrap: anywhere; }
+.b-next ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; }
+.b-next ol li::marker { color: var(--b-gold-ink); font-weight: 800; }
 .b-empty.in-sheet { flex: 1; justify-content: center; }
 
 /* filters */

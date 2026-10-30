@@ -39,6 +39,15 @@ declare global {
   interface Window { Telegram?: { WebApp: TG } }
 }
 
+/** What the customer sees after ordering: kept from the bag before it is emptied. */
+type OrderResult = {
+  orderId: string;
+  notification: string;
+  items: { product: Product; label: string; price: number; quantity: number }[];
+  total: number;
+  customer: { name: string; phone: string; address: string; note: string };
+};
+
 const WINE = '#4f0f15';
 const PAGE = { light: '#f6efe4', dark: '#140c0c' };
 const PAGE_SIZE = 24;
@@ -127,7 +136,7 @@ export default function Storefront() {
 
   const [checkoutReady, setCheckoutReady] = useState(false), [inTelegram, setInTelegram] = useState(false);
   const [viewerRole, setViewerRole] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false), [orderResult, setOrderResult] = useState<{ orderId: string; notification: string } | null>(null);
+  const [busy, setBusy] = useState(false), [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [orderError, setOrderError] = useState(''), [review, setReview] = useState(false), [draftOpened, setDraftOpened] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [customer, setCustomer] = useState({ name: '', phone: '+998 ', address: '', note: '' });
@@ -452,6 +461,15 @@ export default function Storefront() {
     haptic('select');
     setCart((c) => c.map((x) => (x.id === id && x.variant === v ? { ...x, quantity: Math.min(10, x.quantity + d) } : x)).filter((x) => x.quantity > 0));
   }
+  function receipt(details: typeof customer) {
+    return {
+      items: cartRows
+        .filter((x) => x.product && x.product.variants[x.variant])
+        .map((x) => ({ product: x.product!, label: x.product!.variants[x.variant].label, price: x.product!.variants[x.variant].price, quantity: x.quantity })),
+      total: cartTotal,
+      customer: details,
+    };
+  }
   function withGift(details: typeof customer) {
     if (!gift) return details;
     return { ...details, note: [t('Gift note'), details.note.trim()].filter(Boolean).join(' · ').slice(0, 500) };
@@ -500,7 +518,7 @@ export default function Storefront() {
       return;
     }
     if (demo) {
-      setOrderResult({ orderId: 'demo-' + crypto.randomUUID(), notification: 'demo' });
+      setOrderResult({ orderId: 'demo-' + crypto.randomUUID(), notification: 'demo', ...receipt(checked.data) });
       setCart([]);
       return;
     }
@@ -526,7 +544,7 @@ export default function Storefront() {
         throw new Error(d.error);
       }
       haptic('success');
-      setOrderResult(d);
+      setOrderResult({ ...d, ...receipt(checked.data) });
       setCart([]);
       setGift(false);
       setCustomer((c) => ({ ...c, note: '' }));
@@ -1076,9 +1094,9 @@ export default function Storefront() {
                 <BottleMark />
                 <Check size={26} className="b-seal-check" />
               </div>
-              <h3>{t('Your request is saved.')}</h3>
+              <h3>{t('Your order is placed!')}</h3>
               <p className="b-ref">
-                {t('Reference')} #{orderResult.orderId.slice(0, 8)}
+                {t('Reference')} #{orderResult.orderId.replace(/^demo-/, '').slice(0, 8)}
               </p>
               <p>
                 {orderResult.notification === 'demo'
@@ -1089,6 +1107,60 @@ export default function Storefront() {
                       ? t('Your request is safely saved. The Telegram alert could not be delivered; please contact the store with your reference.')
                       : t('Your request is saved; the Telegram alert is pending. Please keep your reference.')}
               </p>
+
+              <section className="b-receipt" aria-label={t('Your order')}>
+                <h4>{t('Your order')}</h4>
+                <ul>
+                  {orderResult.items.map((item) => (
+                    <li key={item.product.id + item.label} style={tintStyle(item.product)}>
+                      <span className="b-line-orb small"><Shot p={item.product} /></span>
+                      <span className="b-receipt-copy">
+                        <span className="b-house">{item.product.brand}</span>
+                        <strong>{displayName(item.product.name)}</strong>
+                        <small>{bottle(item.label)} × {item.quantity}</small>
+                      </span>
+                      <strong className="b-receipt-price">{money(item.price * item.quantity)}</strong>
+                    </li>
+                  ))}
+                </ul>
+                <div className="b-receipt-total">
+                  <span>{t('Product subtotal')}</span>
+                  <strong>{money(orderResult.total)}</strong>
+                </div>
+                <p className="b-receipt-delivery">
+                  <Truck size={15} />
+                  {t(settings.freeTashkentDelivery ? 'Free and quick delivery in Tashkent' : 'Delivery arranged with the store')}
+                </p>
+              </section>
+
+              <section className="b-receipt" aria-label={t('Delivery details')}>
+                <h4>{t('Delivery details')}</h4>
+                <dl>
+                  <dt>{t('Your name')}</dt>
+                  <dd>{orderResult.customer.name}</dd>
+                  <dt>{t('Phone number')}</dt>
+                  <dd>{orderResult.customer.phone}</dd>
+                  <dt>{t('Delivery address')}</dt>
+                  <dd>{orderResult.customer.address}</dd>
+                  {orderResult.customer.note && (
+                    <>
+                      <dt>{t('Note')}</dt>
+                      <dd>{orderResult.customer.note}</dd>
+                    </>
+                  )}
+                </dl>
+              </section>
+
+              <section className="b-receipt b-next" aria-label={t('What happens next')}>
+                <h4>{t('What happens next')}</h4>
+                <ol>
+                  <li>{t('A manager checks availability and contacts you in Telegram or by phone.')}</li>
+                  <li>{t('Together you agree on a convenient delivery time.')}</li>
+                  <li>{t('You pay on receipt.')}</li>
+                </ol>
+                {orderResult.notification !== 'demo' && <p>{t('We have also sent these details to your chat with the bot.')}</p>}
+              </section>
+
               <button className="b-btn ghost" onClick={() => goExternal(settings.managerUrl)}>
                 <MessageCircle size={18} />
                 {t('Contact the store')}

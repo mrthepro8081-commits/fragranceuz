@@ -34,7 +34,7 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
   const [statistics, setStatistics] = useState<StoreStats | null>(null);
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [settings, setSettings] = useState<StoreSettings>(defaultSettings);
-  const [sheets, setSheets] = useState<{ connected: boolean; hint: string | null }>({ connected: false, hint: null });
+  const [sheets, setSheets] = useState<{ connected: boolean; hint: string | null; doc?: string | null }>({ connected: false, hint: null });
   const [tab, setTab] = useState<Tab>('products');
   const [query, setQuery] = useState('');
   const [visibility, setVisibility] = useState<'all' | 'visible' | 'hidden'>('all');
@@ -63,7 +63,7 @@ export default function Admin({ demo = false }: { demo?: boolean }) {
         return;
       }
       const d = (await r.json()) as {
-        error?: string; role: Role; products: Product[]; orders: Order[]; statistics: StoreStats; customers: CustomerRecord[]; settings: StoreSettings; sheets?: { connected: boolean; hint: string | null };
+        error?: string; role: Role; products: Product[]; orders: Order[]; statistics: StoreStats; customers: CustomerRecord[]; settings: StoreSettings; sheets?: { connected: boolean; hint: string | null; doc?: string | null };
       };
       if (!r.ok) throw new Error(d.error);
       setRole(d.role);

@@ -14,7 +14,7 @@ export async function GET(request:Request){
  const e=runtime();if(!e.DB)return error('Database is not connected',503);
  const orders=await e.DB.prepare('SELECT id,data,total,status,notification,created_at FROM orders ORDER BY created_at DESC LIMIT 100').all();
  const [statistics,customers]=await Promise.all([storeStats(e.DB),customerRecords(e.DB)]);
- return Response.json({settings:await storeSettings(),statistics,customers,role,products:await catalog(true),orders:orders.results.map(r=>({...r,data:JSON.parse(String(r.data))})),telegramReady:!!(e.TELEGRAM_BOT_TOKEN&&e.TELEGRAM_ORDER_CHAT_ID),sheets:await sheetsLink(e.DB).then(link=>({connected:!!link,hint:link?link.replace(/^https:\/\/script\.google\.com\/macros\/s\/([\w-]{6})[\w-]*\/exec\?key=.*$/,'script.google.com/…/$1…'):null}))},{headers:{'Cache-Control':'no-store'}});
+ return Response.json({settings:await storeSettings(),statistics,customers,role,products:await catalog(true),orders:orders.results.map(r=>({...r,data:JSON.parse(String(r.data))})),telegramReady:!!(e.TELEGRAM_BOT_TOKEN&&e.TELEGRAM_ORDER_CHAT_ID),sheets:await sheetsLink(e.DB).then(link=>({connected:!!link,hint:link?link.replace(/^https:\/\/script\.google\.com\/macros\/s\/([\w-]{6})[\w-]*\/exec\?key=.*$/,'script.google.com/…/$1…'):null,doc:/^https:\/\/docs\.google\.com\/spreadsheets\/d\/[\w-]+/.test(e.GOOGLE_SHEET_URL||'')?e.GOOGLE_SHEET_URL!.replace(/[?#].*$/,''):null}))},{headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(request:Request){
  if(!sameOrigin(request))return error('Invalid origin',403);if(!await isAdmin(request))return error('Not authorized',401);const e=runtime();if(!e.DB)return error('Database is not connected',503);

@@ -2206,5 +2206,45 @@
   "Connect the Google Sheet first.": [
     "Сначала подключите Google Таблицу.",
     "Avval Google jadvalni ulang."
+  ],
+  "Your order is placed!": [
+    "Заказ оформлен!",
+    "Buyurtma rasmiylashtirildi!"
+  ],
+  "Your order": [
+    "Ваш заказ",
+    "Buyurtmangiz"
+  ],
+  "Delivery details": [
+    "Данные для доставки",
+    "Yetkazib berish ma’lumotlari"
+  ],
+  "What happens next": [
+    "Что дальше",
+    "Keyingi qadamlar"
+  ],
+  "A manager checks availability and contacts you in Telegram or by phone.": [
+    "Менеджер проверит наличие и свяжется с вами в Telegram или по телефону.",
+    "Menejer mavjudligini tekshirib, Telegram yoki telefon orqali siz bilan bog‘lanadi."
+  ],
+  "Together you agree on a convenient delivery time.": [
+    "Вместе согласуем удобное время доставки.",
+    "Qulay yetkazib berish vaqtini birga kelishamiz."
+  ],
+  "You pay on receipt.": [
+    "Оплата — при получении.",
+    "To‘lov — qabul qilganda."
+  ],
+  "We have also sent these details to your chat with the bot.": [
+    "Мы также отправили детали заказа в ваш чат с ботом.",
+    "Buyurtma tafsilotlarini bot bilan chatingizga ham yubordik."
+  ],
+  "Open your client sheet on a computer or in the browser (desktop version).": [
+    "Откройте вашу таблицу клиентов на компьютере или в браузере (версия для компьютера).",
+    "Mijozlar jadvalingizni kompyuterda yoki brauzerda (kompyuter versiyasi) oching."
+  ],
+  "Open the sheet": [
+    "Открыть таблицу",
+    "Jadvalni ochish"
   ]
 }

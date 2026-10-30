@@ -1,6 +1,6 @@
 import {catalog,runtime,error,sameOrigin,body} from '../../../lib/server';
 import {verifyTelegram} from '../../../lib/telegram';
-import {sendOrderAlert} from '../../../lib/order-notify';
+import {sendOrderAlert,messageCustomer} from '../../../lib/order-notify';
 import {pushOrder} from '../../../lib/sheets';
 import {orderInput} from '../../../lib/validation';
 import {translate,formatProductName,formatMoney,formatBottle} from '../../../lib/i18n';
@@ -23,6 +23,7 @@ export async function POST(request:Request){
  let notification='sent';
  try{await sendOrderAlert(e,id,data,new URL(request.url).origin);}catch{notification='failed';}
  await pushOrder(e.DB,{id,createdAt,status:'new',data});
+ await messageCustomer(e,id,data,'new');
  await e.DB.prepare('UPDATE orders SET notification=? WHERE id=?').bind(notification,id).run();
  return Response.json({orderId:id,notification},{status:201});
 }

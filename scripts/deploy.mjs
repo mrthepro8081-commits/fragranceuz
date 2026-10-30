@@ -13,6 +13,7 @@
 //   ADMIN_TELEGRAM_IDS   comma-separated extra admins
 //   ORDER_CHAT_ID        where order alerts go; defaults to the owner
 //   WORKER_NAME          defaults to fragranceuz
+//   GOOGLE_SHEET_URL     the client sheet the admin links to (defaults to the store's sheet)
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -86,6 +87,7 @@ const config = {
     TELEGRAM_ORDER_CHAT_ID: process.env.ORDER_CHAT_ID || OWNER,
     ADMIN_TELEGRAM_IDS: process.env.ADMIN_TELEGRAM_IDS || '',
     TELEGRAM_BOT_USERNAME: bot.username,
+    GOOGLE_SHEET_URL: process.env.GOOGLE_SHEET_URL || 'https://docs.google.com/spreadsheets/d/1S1DyMyHDAGrHYkr3HWW-0nkoLvfk-BlelnWP_7zNnJg/edit',
   },
 };
 fs.writeFileSync(CONFIG, JSON.stringify(config, null, 2));
