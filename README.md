@@ -57,12 +57,9 @@ The Statistics tab (7 / 30 / 90 days): requested value with change vs the previo
 
 ## Current catalog
 
-The public channel was refreshed for **28 April–28 October 2026**, Asia/Tashkent. The audit covers 574 messages across 29 pages, crossing the cutoff on a page dated 20 April. There are **539 catalog offers** from 543 priced posts after removing 4 exact older repeats. Distinct sizes, concentrations, testers, partial bottles and sets remain separate offers. 537 real source photos are stored locally; 2 posts have no image. 22 entries have no single matching scent link and 10 have no explicit release year; those fields remain empty. No substitute Fragrantica URLs, release years, stock counts or scent notes are invented.
+**866 offers** — the whole public history of @fragranceuz (26 Jun 2025 – 31 Oct 2026; earlier posts are no longer public), imported on 1 Nov 2026 from a verified archive of 892 posts and 875 photos via `scripts/import-archive.mjs`. Existing entries were kept (7 whose posts are no longer readable stay from the previous import), 9 older exact repeats of the same offer were dropped, and every entry has a brand. 26 have no single matching Fragrantica link and 14 no explicit release year; those fields stay empty — nothing is guessed. `data/channel-refresh.json` records the coverage; `scripts/bottle-tones.py` was re-run for the colour filter.
 
-`data/products.json` is the verified base catalog. `data/channel-refresh.json` records coverage. Existing persistent `product_overrides`, orders and shop settings take precedence and were preserved during the refresh. Original post timestamps remain source evidence; the customer-facing product facts show fragrance release year, not post date.
-
-Budget tabs: up to 1,000,000 UZS, up to 2,500,000 UZS and Exclusive with no ceiling. Limits are inclusive and combine with audience, house, concentration, search and sorting. Cards, quick add and detail opening use the same cheapest bottle. The catalog initially renders 24 products and loads more on request; management renders 30 rows at a time.
-
+Refresh later with `npm run import:channel` (live, needs t.me) or `node scripts/import-archive.mjs <folder> --apply` (saved archive).
 ## Demo and real management
 
 - Storefront: `/`.

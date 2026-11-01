@@ -1,19 +1,20 @@
 {
   "channel": "https://t.me/fragranceuz",
-  "refreshedAt": "2026-10-28T00:23:55.491Z",
+  "refreshedAt": "2026-11-01T05:53:16.946Z",
   "period": {
-    "since": "2026-04-27T19:00:00.000Z",
-    "through": "2026-10-28",
+    "since": "channel start",
+    "through": "2026-11-01",
     "timezone": "Asia/Tashkent"
   },
   "coverage": {
-    "pages": 29,
-    "newestPostId": 11078,
-    "oldestScannedPostId": 10313,
-    "oldestScannedDate": "2026-04-20T02:23:15+00:00",
-    "cutoffReached": true
+    "pages": 1,
+    "newestPostId": 11095,
+    "oldestScannedPostId": 1,
+    "oldestScannedDate": "2018-08-31T11:44:20+00:00",
+    "cutoffReached": true,
+    "wholeHistory": true
   },
-  "products": 539,
-  "missingScentLinks": 22,
-  "missingReleaseYears": 10
+  "products": 866,
+  "missingScentLinks": 26,
+  "missingReleaseYears": 14
 }
