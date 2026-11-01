@@ -13,5 +13,7 @@
     "oldestScannedDate": "2026-04-20T02:23:15+00:00",
     "cutoffReached": true
   },
-  "products": 539
+  "products": 539,
+  "missingScentLinks": 22,
+  "missingReleaseYears": 10
 }

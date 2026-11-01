@@ -8,10 +8,21 @@ Everything runs on the store owner's free Cloudflare account. About 15 minutes.
 - The **bot token** from @BotFather (`/mybots` → the bot → API Token) — ask the owner; never put it in files or chats
 - First time on Cloudflare Workers: Dashboard → Workers & Pages → choose a **workers.dev subdomain**
 
+## Import the whole channel first (≈800 perfumes)
+The included catalog covers the last six months of @fragranceuz (539 offers). To load every post since the channel began:
+```sh
+npm install
+npm run import:channel     # reads t.me/s/fragranceuz page by page, ~10–20 min
+```
+It saves new photos to `public/products/`, keeps every existing entry, removes only older exact repeats of the same offer, and writes `data/products.json` and `data/channel-refresh.json`. A full report is in `.channel-import/channel-import-audit.json` (skipped posts, missing brands/links, failed photos). If Telegram slows down it waits and retries; if it stops, just run it again.
+
+Optional, for the "shop by bottle colour" filter on the new photos: `pip install pillow && python3 scripts/bottle-tones.py` (without it, colours are measured in the browser when photos load).
+
+Then check `node scripts/test-orders.mjs` passes.
+
 ## Deploy
 In this folder:
 ```sh
-npm install
 npx wrangler login        # browser: Continue with Google → Allow
 npm run deploy            # paste the bot token when asked
 ```
